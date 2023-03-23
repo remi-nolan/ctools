@@ -30,6 +30,7 @@
 enum cstream_error {
    CStreamError_None          = 0,
    CStreamError_EndOfStream   = 1,
+   CStreamError_Unspecified   = 5, //NOTE: really only used with the C-Standard Library, which doesn't give good errors
 
    CStreamError_NullPointer   = 2,
    CStreamError_InvalidArg    = 3,
@@ -50,41 +51,49 @@ enum cstream_file_flags {
    CStream_IsWrite    = (1<<2),
 };
 
-typedef struct _cstream {
+typedef struct cstream_s {
    int type;
    int flags;
 
-   unsigned int position;
-   unsigned int length;
+   union {
+      struct {
+         unsigned int position;
+         unsigned int length;
+      };
+      struct {
+         unsigned int bytes_written;
+         unsigned int bytes_max;
+      };
+   };
 
    void* handle;
-} cstream;
+} cstream_t;
 
 
-int cstream_read_memory(cstream* stream, void* memory, unsigned int num_bytes, int flags);
-int cstream_read_file(cstream* stream, char* filename, int flags);
+int cstream_read_memory(cstream_t* stream, void* memory, unsigned int num_bytes, int flags);
+int cstream_read_file(cstream_t* stream, char* filename, int flags);
 
-int cstream_read_8bits(cstream* stream, char* out);
-int cstream_read_16bits(cstream* stream, short* out);
-int cstream_read_32bits(cstream* stream, long* out);
-int cstream_read_64bits(cstream* stream, long long* out);
+int cstream_read_8bits(cstream_t* stream, char* out);
+int cstream_read_16bits(cstream_t* stream, short* out);
+int cstream_read_32bits(cstream_t* stream, long* out);
+int cstream_read_64bits(cstream_t* stream, long long* out);
 
-/*
-int cstream_write_memory(cstream* stream, void* memory, unsigned int num_bytes, int flags);
-int cstream_write_file(cstream* stream, void* memory, unsigned int num_bytes, int flags);
 
-int cstream_write_8bits(cstream* stream, char val);
-int cstream_write_16bits(cstream* stream, short val);
-int cstream_write_32bits(cstream* stream, long val);
-int cstream_write_64bits(cstream* stream, long long val);
-*/
+int cstream_write_memory(cstream_t* stream, void* memory, unsigned int max_bytes, int flags);
+int cstream_write_file(cstream_t* stream, char* filename, int max_bytes, int flags);
 
-int cstream_readable(cstream* stream);
-int cstream_writable(cstream* stream);
+int cstream_write_8bits(cstream_t* stream, char val);
+int cstream_write_16bits(cstream_t* stream, short val);
+int cstream_write_32bits(cstream_t* stream, long val);
+int cstream_write_64bits(cstream_t* stream, long long val);
 
-int cstream_quit(cstream* stream);
-int cstream_valid(cstream* stream);
-int cstream_rewind(cstream* stream, int amount);
-int cstream_fast_forward(cstream* stream, int amount);
+
+int cstream_readable(cstream_t* stream);
+int cstream_writable(cstream_t* stream);
+
+int cstream_quit(cstream_t* stream);
+int cstream_valid(cstream_t* stream);
+int cstream_rewind(cstream_t* stream, int amount);
+int cstream_fast_forward(cstream_t* stream, int amount);
 
 #endif//CSTREAM_INCLUDED

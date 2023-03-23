@@ -26,9 +26,6 @@
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT EXPRESS OR IMPLIED WARRANTY OF ANY KIND, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef CSTREAM_IMPLEMENTED
-#define CSTREAM_IMPLEMENTED
-
 #ifndef CSTREAM_HEADER_ONLY
 #include "cstream.h"
 #endif//CSTREAM_HEADER_ONLY
@@ -41,7 +38,7 @@ int cstream_error() {
 #define ERROR(error_code) return(cstream_last_error = error_code)
 
 #include <stdio.h>
-int cstream_read_memory(cstream* stream, void* memory, unsigned int num_bytes, int flags) {
+int cstream_read_memory(cstream_t* stream, void* memory, unsigned int num_bytes, int flags) {
    if (!stream || !memory) ERROR(CStreamError_NullPointer);
    if (cstream_valid(stream)) ERROR(CStreamError_InvalidArg);
 
@@ -54,7 +51,7 @@ int cstream_read_memory(cstream* stream, void* memory, unsigned int num_bytes, i
    return(CStreamError_None);
 }
 
-int cstream_read_file(cstream* stream, char* filename, int flags) {
+int cstream_read_file(cstream_t* stream, char* filename, int flags) {
    if (!stream || !filename) ERROR(CStreamError_NullPointer);
    if (cstream_valid(stream)) ERROR(CStreamError_InvalidArg);
 
@@ -78,9 +75,9 @@ int cstream_read_file(cstream* stream, char* filename, int flags) {
 }
 
 
-int cstream_read_8bits(cstream* stream, char* out) {
+int cstream_read_8bits(cstream_t* stream, char* out) {
    if (!stream || !out) ERROR(CStreamError_NullPointer);
-   if (!cstream_valid(stream) || (stream->type & CStream_IsWrite)) ERROR(CStreamError_InvalidArg);
+   if (!cstream_valid(stream) || !cstream_readable(stream)) ERROR(CStreamError_InvalidArg);
    *out = 0;
 
    switch (stream->type) {
@@ -105,7 +102,7 @@ int cstream_read_8bits(cstream* stream, char* out) {
    return(CStreamError_None);
 }
 
-int cstream_read_16bits(cstream* stream, short* out) {
+int cstream_read_16bits(cstream_t* stream, short* out) {
    char byte;
    *out = 0;
 
@@ -134,7 +131,7 @@ int cstream_read_16bits(cstream* stream, short* out) {
    return(CStreamError_None);
 }
 
-int cstream_read_32bits(cstream* stream, long* out) {
+int cstream_read_32bits(cstream_t* stream, long* out) {
    char byte;
    *out = 0;
 
@@ -167,13 +164,13 @@ int cstream_read_32bits(cstream* stream, long* out) {
    if ((stream->flags & CStream_SwapBytes) == CStream_SwapBytes) {
       *out |= byte << 24;
    } else {
-      *out |= byte << 0;
+      *out |= byte;
    }
 
    return(CStreamError_None);
 }
 
-int cstream_read_64bits(cstream* stream, long long* out) {
+int cstream_read_64bits(cstream_t* stream, long long* out) {
    char byte;
    *out = 0;
 
@@ -186,7 +183,7 @@ int cstream_read_64bits(cstream* stream, long long* out) {
     */
    if (cstream_read_8bits(stream, &byte) != CStreamError_None) return(cstream_last_error);
    if ((stream->flags & CStream_SwapBytes) == CStream_SwapBytes) {
-      *out |= (long long)byte << 0;
+      *out |= (long long)byte;
    } else {
       *out |= (long long)byte << 56;
    }
@@ -202,7 +199,7 @@ int cstream_read_64bits(cstream* stream, long long* out) {
    if ((stream->flags & CStream_SwapBytes) == CStream_SwapBytes) {
       *out |= (long long)byte << 16;
    } else {
-      *out |= (long long)byte << 40; 
+      *out |= (long long)byte << 40;
    }
 
    if (cstream_read_8bits(stream, &byte) != CStreamError_None) return(cstream_last_error);
@@ -237,33 +234,137 @@ int cstream_read_64bits(cstream* stream, long long* out) {
    if ((stream->flags & CStream_SwapBytes) == CStream_SwapBytes) {
       *out |= (long long)byte << 56;
    } else {
-      *out |= (long long)byte << 0;
+      *out |= (long long)byte;
    }
 
    return(CStreamError_None);
 }
 
-int cstream_quit(cstream* stream) {
-   if (cstream_valid(stream)) {
+
+int cstream_write_memory(cstream_t* stream, void* memory, unsigned int max_bytes, int flags) {
+   if (!stream || !memory) ERROR(CStreamError_NullPointer);
+   if (cstream_valid(stream)) ERROR(CStreamError_InvalidArg);
+
+   stream->type = CStreamType_Memory;
+   stream->flags = flags|CStream_IsWrite;
+   stream->bytes_written = 0;
+   stream->bytes_max = max_bytes;
+   stream->handle = memory;
+
+   return(CStreamError_None);
+}
+
+int cstream_write_file(cstream_t* stream, char* filename, int max_bytes, int flags) {
+   if (!stream || !filename) ERROR(CStreamError_NullPointer);
+   if (cstream_valid(stream)) ERROR(CStreamError_InvalidArg);
+
+   char file_args[] = "wb";
+   if ((flags & CStream_TextFile) == CStream_TextFile) {
+      file_args[2] = 0;
+   }
+
+   if (max_bytes == 0) {
+      max_bytes = 0xFFFFFFFF;
+   }
+
+   stream->type = CStreamType_File;
+   stream->flags = flags|CStream_IsWrite;
+   stream->bytes_written = 0;
+   stream->bytes_max = max_bytes;
+   stream->handle = fopen(filename, file_args);
+
+   if (!stream->handle) {
+      *stream = (cstream_t){0};
+      ERROR(CStreamError_FileNotFound);
+   }
+
+   return(CStreamError_None);
+}
+
+int cstream_write_8bits(cstream_t* stream, char val) {
+   if (!stream) ERROR(CStreamError_NullPointer);
+   if (!cstream_valid(stream)) ERROR(CStreamError_InvalidArg);
+
+   if (stream->bytes_written <= stream->bytes_max) {
       switch (stream->type) {
-         default:
-            return(CStreamError_InvalidArg);
-
-         case CStreamType_Memory:
-            *stream = (cstream){.handle=stream->handle};
-            break;
-
-         case CStreamType_File:
-            fclose(stream->handle);
-            *stream = (cstream){0};
-            break;
+         case CStreamType_Memory: {
+            ((char*)stream->handle)[stream->position] = val;
+         } break;
+         case CStreamType_File: {
+            char buf[2] = {val, 0};
+            if (fputs(buf, stream->handle) == EOF) {
+               ERROR(CStreamError_Unspecified);
+            }
+         } break;
       }
+
+      ++stream->bytes_written;
+   } else {
+      ERROR(CStreamError_EndOfStream);
    }
 
    return(CStreamError_None);
 }
 
-int cstream_readable(cstream* stream) {
+int cstream_write_16bits(cstream_t* stream, short val) {
+   char byte;
+
+   /*
+    * we're doing the same thing as cstream_read_16bits, but writing the bytes out instead of reading them in
+    */
+   if ((stream->flags & CStream_SwapBytes) == CStream_SwapBytes) {
+      byte = (char)((val & 0xFF) >> 8);
+   } else {
+      byte = (char)(val & 0xFF);
+   }
+   if (cstream_write_8bits(stream, byte) != CStreamError_None) return(cstream_last_error);
+
+   if ((stream->flags & CStream_SwapBytes) == CStream_SwapBytes) {
+      byte = (char)(val & 0xFF);
+   } else {
+      byte = (char)((val & 0xFF00) >> 8);
+   }
+   if (cstream_write_8bits(stream, byte) != CStreamError_None) return(cstream_last_error);
+
+   return(CStreamError_None);
+}
+
+int cstream_write_32bits(cstream_t* stream, long val) {
+   char byte;
+
+   if ((stream->flags & CStream_SwapBytes) == CStream_SwapBytes) {
+      byte = (char)((val & 0xFF000000) >> 24);
+   } else {
+      byte = (char)(val & 0x000000FF);
+   }
+   if (cstream_write_8bits(stream, byte) != CStreamError_None) return(cstream_last_error);
+
+   if ((stream->flags & CStream_SwapBytes) == CStream_SwapBytes) {
+      byte = (char)((val & 0x00FF0000) >> 16);
+   } else {
+      byte = (char)((val & 0x0000FF00) >> 8);
+   }
+   if (cstream_write_8bits(stream, byte) != CStreamError_None) return(cstream_last_error);
+
+   if ((stream->flags & CStream_SwapBytes) == CStream_SwapBytes) {
+      byte = (char)((val & 0x0000FF00) >> 8);
+   } else {
+      byte = (char)((val & 0x00FF0000) >> 16);
+   }
+   if (cstream_write_8bits(stream, byte) != CStreamError_None) return(cstream_last_error);
+
+   if ((stream->flags & CStream_SwapBytes) == CStream_SwapBytes) {
+      byte = (char)(val & 0x000000FF);
+   } else {
+      byte = (char)((val & 0xFF000000) >> 32);
+   }
+   if (cstream_write_8bits(stream, byte) != CStreamError_None) return(cstream_last_error);
+
+   return(CStreamError_None);
+}
+
+
+int cstream_readable(cstream_t* stream) {
    if (stream) {
       return((stream->flags & CStream_IsWrite) != CStream_IsWrite);
    } else {
@@ -271,7 +372,7 @@ int cstream_readable(cstream* stream) {
    }
 }
 
-int cstream_writable(cstream* stream) {
+int cstream_writable(cstream_t* stream) {
    if (stream) {
       return((stream->flags & CStream_IsWrite) == CStream_IsWrite);
    } else {
@@ -279,7 +380,28 @@ int cstream_writable(cstream* stream) {
    }
 }
 
-int cstream_valid(cstream* stream) {
+
+int cstream_quit(cstream_t* stream) {
+   if (cstream_valid(stream)) {
+      switch (stream->type) {
+         default:
+            return(CStreamError_InvalidArg);
+
+         case CStreamType_Memory:
+            *stream = (cstream_t){.handle=stream->handle};
+            break;
+
+         case CStreamType_File:
+            fclose(stream->handle);
+            *stream = (cstream_t){0};
+            break;
+      }
+   }
+
+   return(CStreamError_None);
+}
+
+int cstream_valid(cstream_t* stream) {
    /*
     * as of right now, this is the valid for *both* file and memory streams;
     * this might change later if more `stream_type`s are added,
@@ -289,7 +411,7 @@ int cstream_valid(cstream* stream) {
    return(stream->position <= stream->length && stream->length > 0 && stream->handle != 0);
 }
 
-int cstream_rewind(cstream* stream, int amount) {
+int cstream_rewind(cstream_t* stream, int amount) {
    if (!stream) ERROR(CStreamError_NullPointer);
    if (!cstream_valid(stream)) ERROR(CStreamError_InvalidArg);
 
@@ -314,11 +436,11 @@ int cstream_rewind(cstream* stream, int amount) {
          fseek(stream->handle, amount, SEEK_CUR);
          break;
    }
-   
+
    return(CStreamError_None);
 }
 
-int cstream_fast_forward(cstream* stream, int amount) {
+int cstream_fast_forward(cstream_t* stream, int amount) {
    if (!stream) ERROR(CStreamError_NullPointer);
    if (!cstream_valid(stream)) ERROR(CStreamError_InvalidArg);
 
@@ -347,4 +469,3 @@ int cstream_fast_forward(cstream* stream, int amount) {
 
 #undef ERROR
 
-#endif//CSTREAM_IMPLEMENTED
