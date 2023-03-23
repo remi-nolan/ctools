@@ -9,8 +9,6 @@ Currently it supports the C-Standard Library for file i/o however platform-speci
 
 Simply add `cstream.h` to you include path and `cstream.c` to your build, and you're off to the races.
 
-A header-only version is planned for the future but as of yet unimplemented.
-
 ## Testing
 
 Running `make` from the directory containing cstream & its makefile will compile cstream\_test.c and run the resulting executable.
