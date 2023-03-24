@@ -34,27 +34,15 @@ int main(int arg_count, char** args) {
    char* buff = (char*)malloc(buff_length + 1); if (!buff) return(-100);
 
    printf("write_memory:\n   "); {
-      if (cstream_write_memory(&stream, (void*)buff, buff_length + 1, 0) == CStreamError_None) {
+      if (cstream_write_memory(&stream, (void*)buff, buff_length+1, 0) == CStreamError_None) {
          for (int iter = 0; iter <= buff_length; ++iter ) {
             char byte = 0;
-            switch (iter & 0xF) {
-               case 0x0: byte = '0'; break;
-               case 0x1: byte = '1'; break;
-               case 0x2: byte = '2'; break;
-               case 0x3: byte = '3'; break;
-               case 0x4: byte = '4'; break;
-               case 0x5: byte = '5'; break;
-               case 0x6: byte = '6'; break;
-               case 0x7: byte = '7'; break;
-               case 0x8: byte = '8'; break;
-               case 0x9: byte = '9'; break;
-               case 0xA: byte = 'A'; break;
-               case 0xB: byte = 'B'; break;
-               case 0xC: byte = 'C'; break;
-               case 0xD: byte = 'D'; break;
-               case 0xE: byte = 'E'; break;
-               case 0xF: byte = 'F'; break;
+            if (iter % 2 == 0) {
+               byte = 'e';
+            } else {
+               byte = 'o';
             }
+
             if (cstream_write_8bits(&stream, byte) != CStreamError_None) {
                printf("\nerror ocurrrred!!!!!!!!!! %d\n", cstream_error());
                return(-5);
@@ -73,7 +61,7 @@ int main(int arg_count, char** args) {
    }
 
    printf("read_memory:\n   "); {
-      if (cstream_read_memory(&stream, buff, buff_length + 1, 0) == CStreamError_None) {
+      if (cstream_read_memory(&stream, buff, buff_length, 0) == CStreamError_None) {
          char byte = 0;
          int error = 0;
          do { error = cstream_read_8bits(&stream, &byte);
