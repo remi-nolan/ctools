@@ -1,15 +1,19 @@
 
-ifdef OS
-	exe := .exe
-	fixpath = $(subst /,\,$1)
+ifdef ($(OS))
+	exe=$(1).exe
+	cmd=$(call exe,$(1))
 else
-	exe := 
-	fixpath = $1
+	exe=$(1)
+	cmd=./$(call exe,$(1))
 endif
 
-test: cstream_test
-	$(call fixpath,./cstest$(exe))
+all: cstream
 
-cstream_test:
-	clang -Wall -Werror -g -o cstest$(exe) cstream_test.c
+cstream:
+	cd cstream
+	clang -Wall -Werror -g -o $(call exe,cstest) cstream_test.c
+	$(call cmd,cstest)
+
+.ONESHELL: cstream
+.PHONY: all cstream
 

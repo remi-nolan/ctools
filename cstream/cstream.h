@@ -6,7 +6,6 @@
  * ANTI-CAPITALIST SOFTWARE LICENSE (v 1.4)
  *
  * Copyright © 2023 Remi Nolan Eidahl
- *
  * This is anti-capitalist software, released for free use by individuals and organizations that do not operate by capitalist principles.
  *
  * Permission is hereby granted, free of charge, to any person or organization (the "User") obtaining a copy of this software and associated documentation files (the "Software"), to use, copy, modify, merge, distribute, and/or sell copies of the Software, subject to the following conditions:
@@ -26,6 +25,19 @@
 
 #ifndef CSTREAM_INCLUDED
 #define CSTREAM_INCLUDED
+
+#ifndef CTOOLS_NO_STANDARD_INCLUDE
+#include <stdint.h>
+#else
+#define int8_t    signed char
+#define int16_t   signed short
+#define int32_t   signed long
+#define int64_t   signed long long
+#define uint8_t   unsigned char
+#define uint16_t  unsigned short
+#define uint32_t  unsigned long
+#define uint64_t  unsigned long long
+#endif
 
 enum cstream_error {
    CStreamError_None          = 0,
@@ -57,12 +69,12 @@ typedef struct cstream_s {
 
    union {
       struct {
-         unsigned int position;
-         unsigned int length;
+         uint32_t position;
+         uint32_t length;
       };
       struct {
-         unsigned int bytes_written;
-         unsigned int bytes_max;
+         uint32_t bytes_written;
+         uint32_t bytes_max;
       };
    };
 
@@ -70,22 +82,22 @@ typedef struct cstream_s {
 } cstream_t;
 
 
-int cstream_read_memory(cstream_t* stream, void* memory, unsigned int num_bytes, int flags);
+int cstream_read_memory(cstream_t* stream, void* memory, uint32_t num_bytes, int flags);
 int cstream_read_file(cstream_t* stream, char* filename, int flags);
 
-int cstream_read_8bits(cstream_t* stream, char* out);
-int cstream_read_16bits(cstream_t* stream, short* out);
-int cstream_read_32bits(cstream_t* stream, long* out);
-int cstream_read_64bits(cstream_t* stream, long long* out);
+int cstream_read_8bits(cstream_t* stream, int8_t* out);
+int cstream_read_16bits(cstream_t* stream, int16_t* out);
+int cstream_read_32bits(cstream_t* stream, int32_t* out);
+int cstream_read_64bits(cstream_t* stream, int64_t* out);
 
 
-int cstream_write_memory(cstream_t* stream, void* memory, unsigned int max_bytes, int flags);
-int cstream_write_file(cstream_t* stream, char* filename, int max_bytes, int flags);
+int cstream_write_memory(cstream_t* stream, void* memory, uint32_t max_bytes, int flags);
+int cstream_write_file(cstream_t* stream, char* filename, uint32_t max_bytes, int flags);
 
-int cstream_write_8bits(cstream_t* stream, char val);
-int cstream_write_16bits(cstream_t* stream, short val);
-int cstream_write_32bits(cstream_t* stream, long val);
-int cstream_write_64bits(cstream_t* stream, long long val);
+int cstream_write_8bits(cstream_t* stream, int8_t val);
+int cstream_write_16bits(cstream_t* stream, int16_t val);
+int cstream_write_32bits(cstream_t* stream, int32_t val);
+int cstream_write_64bits(cstream_t* stream, int64_t val);
 
 
 int cstream_readable(cstream_t* stream);
@@ -93,7 +105,7 @@ int cstream_writable(cstream_t* stream);
 
 int cstream_quit(cstream_t* stream);
 int cstream_valid(cstream_t* stream);
-int cstream_rewind(cstream_t* stream, int amount);
-int cstream_fast_forward(cstream_t* stream, int amount);
+int cstream_rewind(cstream_t* stream, uint32_t amount);
+int cstream_fast_forward(cstream_t* stream, uint32_t amount);
 
 #endif//CSTREAM_INCLUDED
