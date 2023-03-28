@@ -85,6 +85,8 @@ typedef struct cstream_s {
 int cstream_read_memory(cstream_t* stream, void* memory, uint32_t num_bytes, int flags);
 int cstream_read_file(cstream_t* stream, char* filename, int flags);
 
+int cstream_read_bytes(cstream_t* stream, uint32_t count, int8_t* buffer);
+
 int cstream_read_8bits(cstream_t* stream, int8_t* out);
 int cstream_read_16bits(cstream_t* stream, int16_t* out);
 int cstream_read_32bits(cstream_t* stream, int32_t* out);

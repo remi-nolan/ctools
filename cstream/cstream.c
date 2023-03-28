@@ -30,15 +30,17 @@
 
 static int cstream_last_error;
 int cstream_error() {
-   return(cstream_last_error);
+   int result = cstream_last_error;
+   cstream_last_error = CStreamError_None;
+   return(result);
 }
 
-#define ERROR(error_code) return(cstream_last_error = error_code)
+#define CStream_ErrorOut(error_code) return(cstream_last_error = error_code)
 
 #include <stdio.h>
 int cstream_read_memory(cstream_t* stream, void* memory, uint32_t num_bytes, int flags) {
-   if (!stream || !memory) ERROR(CStreamError_NullPointer);
-   if (cstream_valid(stream)) ERROR(CStreamError_InvalidArg);
+   if (!stream || !memory) CStream_ErrorOut(CStreamError_NullPointer);
+   if (cstream_valid(stream)) CStream_ErrorOut(CStreamError_InvalidArg);
 
    stream->type = CStreamType_Memory;
    stream->flags = flags & ~CStream_IsWrite;
@@ -50,8 +52,8 @@ int cstream_read_memory(cstream_t* stream, void* memory, uint32_t num_bytes, int
 }
 
 int cstream_read_file(cstream_t* stream, char* filename, int flags) {
-   if (!stream || !filename) ERROR(CStreamError_NullPointer);
-   if (cstream_valid(stream)) ERROR(CStreamError_InvalidArg);
+   if (!stream || !filename) CStream_ErrorOut(CStreamError_NullPointer);
+   if (cstream_valid(stream)) CStream_ErrorOut(CStreamError_InvalidArg);
 
    char file_args[] = "rb";
    if ((flags & CStream_TextFile) == CStream_TextFile) {
@@ -68,171 +70,91 @@ int cstream_read_file(cstream_t* stream, char* filename, int flags) {
 
       return(CStreamError_None);
    } else {
-      ERROR(CStreamError_FileNotFound);
+      CStream_ErrorOut(CStreamError_FileNotFound);
    }
 }
 
+uint32_t cstream_read(cstream_t* stream, uint32_t count, int8_t* buffer) {
+   uint32_t bytes_read = 0;
 
-int cstream_read_8bits(cstream_t* stream, int8_t* out) {
-   if (!stream || !out) ERROR(CStreamError_NullPointer);
-   if (!cstream_valid(stream) || !cstream_readable(stream)) ERROR(CStreamError_InvalidArg);
-   *out = 0;
-
-   switch (stream->type) {
-      default: ERROR(CStreamError_InvalidArg);
-
-      case CStreamType_Memory:
-         if (stream->position < stream->length) {
-            *out |= ((uint8_t*)stream->handle)[stream->position];
-         } else ERROR(CStreamError_EndOfStream);
-         break;
-
-      case CStreamType_File: {
-            size_t bytes_read = fread(out, 1, 1, (FILE*)stream->handle);
-            if (bytes_read == 0 || *out == EOF) {
-               *out |= 0;
-               ERROR(CStreamError_EndOfStream);
-            }
+   if (!stream || !buffer) {
+      cstream_last_error = CStreamError_NullPointer;
+   } else if (!cstream_valid(stream) || !cstream_readable(stream) || count == 0) {
+      cstream_last_error = CStreamError_InvalidArg;
+   } else if (stream->position >= stream->length) {
+      cstream_last_error = CStreamError_EndOfStream;
+   } else {
+      switch (stream->type) {
+         default: {
+            cstream_last_error = CStreamError_InvalidArg;
          } break;
+
+         case CStreamType_Memory: {
+            if (stream->position + count >= stream->length) {
+               count = stream->length - stream->position;
+            }
+
+            for (bytes_read = 0; bytes_read < count; ++bytes_read)
+               *buffer++ = ((int8_t*)stream->handle)[stream->position++];
+         } break;
+
+         case CStreamType_File: {
+            uint32_t remaining_length = stream->length - stream->position;
+            if (count > remaining_length)
+               count = remaining_length;
+
+            size_t bytes_read = fread(buffer, 1, count, (FILE*)stream->handle);
+
+            if (bytes_read < count)
+               cstream_last_error = CStreamError_EndOfStream;
+
+            stream->position += bytes_read;
+         } break;
+      }
    }
 
-   ++stream->position;
+   return(bytes_read);
+}
+
+int cstream_read_8bits(cstream_t* stream, int8_t* out) {
+   if (cstream_read(stream, 1, (int8_t*)out) != 1 || cstream_last_error == CStreamError_EndOfStream)
+      CStream_ErrorOut(cstream_last_error);
+
    return(CStreamError_None);
 }
 
 int cstream_read_16bits(cstream_t* stream, int16_t* out) {
-   int8_t byte;
-   *out = 0;
+   if (cstream_read(stream, 2, (int8_t*)out) != 2)
+      CStream_ErrorOut(cstream_last_error);
 
-   /*
-    * here we are reading the hi-order byte from the buffer.
-    * however if the user has requested that we swap the hi- and lo- order bytes in this stream,
-    * we want to treat it as the lo-order byte
-    */
-   if (cstream_read_8bits(stream, &byte) != CStreamError_None) return(cstream_last_error);
-   if ((stream->flags & CStream_SwapBytes) == CStream_SwapBytes) {
-      *out |= byte;
-   } else {
-      *out |= byte << 8;
-   }
-
-   /*
-    * we're just doing the inverse of above, because we read the lo-order byte
-    */
-   if (cstream_read_8bits(stream, &byte) != CStreamError_None) return(cstream_last_error);
-   if ((stream->flags & CStream_SwapBytes) == CStream_SwapBytes) {
-      *out |= byte << 8;
-   } else {
-      *out |= byte;
+   if (stream->flags & CStream_SwapBytes) {
+      int16_t tmp = *out;
+      *out = ((tmp & 0x00FF) << 8)|((tmp & 0xFF00) >> 8);
    }
 
    return(CStreamError_None);
 }
 
 int cstream_read_32bits(cstream_t* stream, int32_t* out) {
-   int8_t byte;
-   *out = 0;
+   if (cstream_read(stream, 4, (int8_t*)out) != 4)
+      CStream_ErrorOut(cstream_last_error);
 
-   /*
-    * see `cstream_read_16bits` for an explanation of how this function works
-    * albeit with a 16-bit value instead of a 32-bit one
-    */
-   if (cstream_read_8bits(stream, &byte) != CStreamError_None) return(cstream_last_error);
-   if ((stream->flags & CStream_SwapBytes) == CStream_SwapBytes) {
-      *out |= byte;
-   } else {
-      *out |= byte << 24;
-   }
-
-   if (cstream_read_8bits(stream, &byte) != CStreamError_None) return(cstream_last_error);
-   if ((stream->flags & CStream_SwapBytes) == CStream_SwapBytes) {
-      *out |= byte << 16;
-   } else {
-      *out |= byte << 8;
-   }
-
-   if (cstream_read_8bits(stream, &byte) != CStreamError_None) return(cstream_last_error);
-   if ((stream->flags & CStream_SwapBytes) == CStream_SwapBytes) {
-      *out |= byte << 8;
-   } else {
-      *out |= byte << 16;
-   }
-
-   if (cstream_read_8bits(stream, &byte) != CStreamError_None) return(cstream_last_error);
-   if ((stream->flags & CStream_SwapBytes) == CStream_SwapBytes) {
-      *out |= byte << 24;
-   } else {
-      *out |= byte;
+   if (stream->flags & CStream_SwapBytes) {
+      int32_t tmp = *out;
+      *out = ((tmp & 0x000000FF) << 24)|((tmp & 0x0000FF00) << 8)|((tmp & 0x00FF0000) >> 8)|((tmp & 0xFF000000) >> 24);
    }
 
    return(CStreamError_None);
 }
 
 int cstream_read_64bits(cstream_t* stream, int64_t* out) {
-   int8_t byte;
-   *out = 0;
+   if (cstream_read(stream, 8, (int8_t*)out) != 8)
+      return(cstream_last_error);
 
-   //  56 48 40 32 24 16  8  0
-   //0xFF FF FF FF FF FF FF FF
-
-   /*
-    * see `cstream_read_16bits` for an explanation of how this function works
-    * albeit with a 16-bit value instead of a 64-bit one
-    */
-   if (cstream_read_8bits(stream, &byte) != CStreamError_None) return(cstream_last_error);
-   if ((stream->flags & CStream_SwapBytes) == CStream_SwapBytes) {
-      *out |= (long long)byte;
-   } else {
-      *out |= (long long)byte << 56;
-   }
-
-   if (cstream_read_8bits(stream, &byte) != CStreamError_None) return(cstream_last_error);
-   if ((stream->flags & CStream_SwapBytes) == CStream_SwapBytes) {
-      *out |= (long long)byte << 8;
-   } else {
-      *out |= (long long)byte << 48;
-   }
-
-   if (cstream_read_8bits(stream, &byte) != CStreamError_None) return(cstream_last_error);
-   if ((stream->flags & CStream_SwapBytes) == CStream_SwapBytes) {
-      *out |= (long long)byte << 16;
-   } else {
-      *out |= (long long)byte << 40;
-   }
-
-   if (cstream_read_8bits(stream, &byte) != CStreamError_None) return(cstream_last_error);
-   if ((stream->flags & CStream_SwapBytes) == CStream_SwapBytes) {
-      *out |= (long long)byte << 24;
-   } else {
-      *out |= (long long)byte << 32;
-   }
-
-   if (cstream_read_8bits(stream, &byte) != CStreamError_None) return(cstream_last_error);
-   if ((stream->flags & CStream_SwapBytes) == CStream_SwapBytes) {
-      *out |= (long long)byte << 32;
-   } else {
-      *out |= (long long)byte << 24;
-   }
-
-   if (cstream_read_8bits(stream, &byte) != CStreamError_None) return(cstream_last_error);
-   if ((stream->flags & CStream_SwapBytes) == CStream_SwapBytes) {
-      *out |= (long long)byte << 40;
-   } else {
-      *out |= (long long)byte << 16;
-   }
-
-   if (cstream_read_8bits(stream, &byte) != CStreamError_None) return(cstream_last_error);
-   if ((stream->flags & CStream_SwapBytes) == CStream_SwapBytes) {
-      *out |= (long long)byte << 48;
-   } else {
-      *out |= (long long)byte << 8;
-   }
-
-   if (cstream_read_8bits(stream, &byte) != CStreamError_None) return(cstream_last_error);
-   if ((stream->flags & CStream_SwapBytes) == CStream_SwapBytes) {
-      *out |= (long long)byte << 56;
-   } else {
-      *out |= (long long)byte;
+   if (stream->flags & CStream_SwapBytes) {
+      int64_t tmp = *out;
+      *out = ((tmp & 0x00000000000000FF) << 56)|((tmp & 0x000000000000FF00) << 40)|((tmp & 0x0000000000FF0000) << 24)|((tmp & 0x00000000FF000000) << 8)|
+             ((tmp & 0xFF00000000000000) >> 56)|((tmp & 0x00FF000000000000) >> 40)|((tmp & 0x0000FF0000000000) >> 24)|((tmp & 0x000000FF00000000) >> 8);
    }
 
    return(CStreamError_None);
@@ -240,8 +162,8 @@ int cstream_read_64bits(cstream_t* stream, int64_t* out) {
 
 
 int cstream_write_memory(cstream_t* stream, void* memory, uint32_t max_bytes, int flags) {
-   if (!stream || !memory) ERROR(CStreamError_NullPointer);
-   if (cstream_valid(stream)) ERROR(CStreamError_InvalidArg);
+   if (!stream || !memory) CStream_ErrorOut(CStreamError_NullPointer);
+   if (cstream_valid(stream)) CStream_ErrorOut(CStreamError_InvalidArg);
 
    stream->type = CStreamType_Memory;
    stream->flags = flags|CStream_IsWrite;
@@ -253,8 +175,8 @@ int cstream_write_memory(cstream_t* stream, void* memory, uint32_t max_bytes, in
 }
 
 int cstream_write_file(cstream_t* stream, char* filename, uint32_t max_bytes, int flags) {
-   if (!stream || !filename) ERROR(CStreamError_NullPointer);
-   if (cstream_valid(stream)) ERROR(CStreamError_InvalidArg);
+   if (!stream || !filename) CStream_ErrorOut(CStreamError_NullPointer);
+   if (cstream_valid(stream)) CStream_ErrorOut(CStreamError_InvalidArg);
 
    char file_args[] = "wb";
    if ((flags & CStream_TextFile) == CStream_TextFile) {
@@ -273,15 +195,15 @@ int cstream_write_file(cstream_t* stream, char* filename, uint32_t max_bytes, in
 
    if (!stream->handle) {
       *stream = (cstream_t){0};
-      ERROR(CStreamError_FileNotFound);
+      CStream_ErrorOut(CStreamError_FileNotFound);
    }
 
    return(CStreamError_None);
 }
 
 int cstream_write_8bits(cstream_t* stream, int8_t val) {
-   if (!stream) ERROR(CStreamError_NullPointer);
-   if (!cstream_valid(stream)) ERROR(CStreamError_InvalidArg);
+   if (!stream) CStream_ErrorOut(CStreamError_NullPointer);
+   if (!cstream_valid(stream)) CStream_ErrorOut(CStreamError_InvalidArg);
 
    if (stream->bytes_written <= stream->bytes_max) {
       switch (stream->type) {
@@ -291,14 +213,14 @@ int cstream_write_8bits(cstream_t* stream, int8_t val) {
          case CStreamType_File: {
             char buf[2] = {val, 0};
             if (fputs(buf, stream->handle) == EOF) {
-               ERROR(CStreamError_Unspecified);
+               CStream_ErrorOut(CStreamError_Unspecified);
             }
          } break;
       }
 
       ++stream->bytes_written;
    } else {
-      ERROR(CStreamError_EndOfStream);
+      CStream_ErrorOut(CStreamError_EndOfStream);
    }
 
    return(CStreamError_None);
@@ -445,7 +367,7 @@ int cstream_quit(cstream_t* stream) {
    if (cstream_valid(stream)) {
       switch (stream->type) {
          default:
-            return(CStreamError_InvalidArg);
+            CStream_ErrorOut(CStreamError_InvalidArg);
 
          case CStreamType_Memory:
             *stream = (cstream_t){.handle=stream->handle};
@@ -456,6 +378,8 @@ int cstream_quit(cstream_t* stream) {
             *stream = (cstream_t){0};
             break;
       }
+
+      cstream_last_error = CStreamError_None;
    }
 
    return(CStreamError_None);
@@ -468,15 +392,15 @@ int cstream_valid(cstream_t* stream) {
     * at which time this function will need to be in the standard discriminated union form
     *  - remi, 22 march 2023
     */
-   return(stream->position <= stream->length && stream->length > 0 && stream->handle != 0);
+   return(stream->length > 0 && stream->handle != 0);
 }
 
 int cstream_rewind(cstream_t* stream, uint32_t amount) {
-   if (!stream) ERROR(CStreamError_NullPointer);
-   if (!cstream_valid(stream)) ERROR(CStreamError_InvalidArg);
+   if (!stream) CStream_ErrorOut(CStreamError_NullPointer);
+   if (!cstream_valid(stream)) CStream_ErrorOut(CStreamError_InvalidArg);
 
    switch (stream->type) {
-      default: ERROR(CStreamError_InvalidArg);
+      default: CStream_ErrorOut(CStreamError_InvalidArg);
 
       case CStreamType_Memory:
          if (amount == 0 || amount > stream->position) {
@@ -501,11 +425,11 @@ int cstream_rewind(cstream_t* stream, uint32_t amount) {
 }
 
 int cstream_fast_forward(cstream_t* stream, uint32_t amount) {
-   if (!stream) ERROR(CStreamError_NullPointer);
-   if (!cstream_valid(stream)) ERROR(CStreamError_InvalidArg);
+   if (!stream) CStream_ErrorOut(CStreamError_NullPointer);
+   if (!cstream_valid(stream)) CStream_ErrorOut(CStreamError_InvalidArg);
 
    switch (stream->type) {
-      default: ERROR(CStreamError_InvalidArg);
+      default: CStream_ErrorOut(CStreamError_InvalidArg);
 
       case CStreamType_Memory:
          if (amount == 0 || amount > stream->position) {
@@ -527,5 +451,5 @@ int cstream_fast_forward(cstream_t* stream, uint32_t amount) {
    return(CStreamError_None);
 }
 
-#undef ERROR
+#undef CStream_ErrorOut
 
