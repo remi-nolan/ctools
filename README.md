@@ -9,13 +9,13 @@ All of the libraries can be compiled without linking against the standard librar
 
 ## in this repository
 
-Each library is in its own directory (i.e. `cstream` is in `<ctools>/cstream/`), containing a header file and two source files (the library's source file and a test program's source file).
+Each library is in its own directory (i.e. `ctalk` is in `<ctools>/ctalk/`), containing a header file and two source files (the library's source file and a test program's source file).
 
 A list of the libraries and a short description is as follows:
 
 library | description
 ------: | :----------
-cstream | a cross-platform file i/o api and file/memory stream api
+ctalk   | a cross-platform file i/o api and file/memory stream api
 
 ## testing ctools
 
