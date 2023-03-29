@@ -85,7 +85,7 @@ typedef struct cstream_s {
 int cstream_read_memory(cstream_t* stream, void* memory, uint32_t num_bytes, int flags);
 int cstream_read_file(cstream_t* stream, char* filename, int flags);
 
-int cstream_read_bytes(cstream_t* stream, uint32_t count, int8_t* buffer);
+uint32_t cstream_read(cstream_t* stream, uint32_t count, int8_t* buffer);
 
 int cstream_read_8bits(cstream_t* stream, int8_t* out);
 int cstream_read_16bits(cstream_t* stream, int16_t* out);
@@ -95,6 +95,8 @@ int cstream_read_64bits(cstream_t* stream, int64_t* out);
 
 int cstream_write_memory(cstream_t* stream, void* memory, uint32_t max_bytes, int flags);
 int cstream_write_file(cstream_t* stream, char* filename, uint32_t max_bytes, int flags);
+
+uint32_t cstream_write(cstream_t* stream, uint32_t count, int8_t* buffer);
 
 int cstream_write_8bits(cstream_t* stream, int8_t val);
 int cstream_write_16bits(cstream_t* stream, int16_t val);
