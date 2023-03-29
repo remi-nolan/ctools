@@ -28,7 +28,8 @@
 
 #ifndef CTOOLS_NO_STANDARD_INCLUDE
 #include <stdint.h>
-#else
+#elif !defined(CTOOLS_STDINT)
+#define CTOOLS_STDINT
 #define int8_t    signed char
 #define int16_t   signed short
 #define int32_t   signed long
