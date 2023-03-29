@@ -7,13 +7,13 @@ else
 	cmd=./$(call exe,$(1))
 endif
 
-all: cstream
+all: ctalk
 
-cstream:
-	cd cstream
-	clang -Wall -Werror -g -o $(call exe,cstest) cstream_test.c
-	$(call cmd,cstest)
+ctalk:
+	cd ctalk
+	clang -Wall -Werror -g -o $(call exe,ct_test) cstream_test.c
+	$(call cmd,ct_test)
 
-.ONESHELL: cstream
-.PHONY: all cstream
+.ONESHELL: ctalk
+.PHONY: all ctalk
 

@@ -23,19 +23,20 @@
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT EXPRESS OR IMPLIED WARRANTY OF ANY KIND, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include "cstream.c"
+#define CTALK_IMPLEMENTATION
+#include "ctalk.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
 
-#define PRINT_ERROR() printf("\nerror!!!! %d %s (%s:%d)\n", cstream_error(), __func__, __FILE__, __LINE__)
+#define PRINT_ERROR() printf("\nerror!!!! %d %s (%s:%d)\n", ctalk_error(), __func__, __FILE__, __LINE__)
 bool write_memory(char* buff, uint32_t buff_length) {
    cstream_t stream = {0};
 
    printf("write_memory:\n   ");
 
-   if (cstream_write_memory(&stream, (void*)buff, buff_length, 0) != CStreamError_None) {
+   if (cstream_write_memory(&stream, (void*)buff, buff_length, 0) != CTalkError_None) {
       PRINT_ERROR();
       return(false);
    }
@@ -48,12 +49,12 @@ bool write_memory(char* buff, uint32_t buff_length) {
          byte = 'o';
       }
 
-      if (cstream_write_8bits(&stream, byte) != CStreamError_None) {
+      if (cstream_write_8bits(&stream, byte) != CTalkError_None) {
          PRINT_ERROR();
          return(false);
       }
    }
-   if (cstream_write_8bits(&stream, 0) != CStreamError_None) {
+   if (cstream_write_8bits(&stream, 0) != CTalkError_None) {
       PRINT_ERROR();
       return(false);
    }
@@ -67,7 +68,7 @@ bool read_memory(char* buff, int buff_length) {
    cstream_t stream = {0};
 
    printf("read_memory:\n   ");
-   if (cstream_read_memory(&stream, buff, buff_length, 0) != CStreamError_None) {
+   if (cstream_read_memory(&stream, buff, buff_length, 0) != CTalkError_None) {
       PRINT_ERROR();
       return(false);
    }
@@ -78,12 +79,12 @@ bool read_memory(char* buff, int buff_length) {
    do {
       error = cstream_read_8bits(&stream, &byte);
 
-      if (error == CStreamError_None) {
+      if (error == CTalkError_None) {
          printf("%c", byte);
       }
-   } while (error == CStreamError_None);
+   } while (error == CTalkError_None);
 
-   if (error != CStreamError_EndOfStream) {
+   if (error != CTalkError_EndOfStream) {
       PRINT_ERROR();
       return(false);
    }
@@ -97,9 +98,9 @@ bool write_file(char* buff, uint32_t buff_length) {
    cstream_t stream = {0};
 
    printf("write_file:\n   ");
-   if (cstream_write_file(&stream, "cstest.txt", 0, CStream_TextFile) == CStreamError_None) {
+   if (cstream_write_file(&stream, "ct_test.txt", 0, CStream_TextFile) == CTalkError_None) {
       for (int8_t* c = (int8_t*)buff; *c != 0; ++c) {
-         if (cstream_write_8bits(&stream, *c) != CStreamError_None) {
+         if (cstream_write_8bits(&stream, *c) != CTalkError_None) {
             PRINT_ERROR();
             return(false);
          }
@@ -119,20 +120,20 @@ bool read_file() {
    cstream_t stream = {0};
 
    printf("read_file:\n   ");
-   if (cstream_read_file(&stream, "cstest.txt", CStream_TextFile) != CStreamError_None) {
+   if (cstream_read_file(&stream, "ct_test.txt", CStream_TextFile) != CTalkError_None) {
       PRINT_ERROR();
       return(false);
    }
 
    int8_t byte = 0;
-   int error = CStreamError_None;
+   int error = CTalkError_None;
    do {
       error = cstream_read_8bits(&stream, &byte);
-      if (error == CStreamError_None)
+      if (error == CTalkError_None)
          printf("%c", byte);
-   } while (error == CStreamError_None);
+   } while (error == CTalkError_None);
 
-   if (error != CStreamError_EndOfStream) {
+   if (error != CTalkError_EndOfStream) {
       PRINT_ERROR();
       return(false);
    }
