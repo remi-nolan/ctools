@@ -15,7 +15,7 @@ A list of the libraries and a short description is as follows:
 
 library | description
 ------: | :----------
-ctalk   | a cross-platform file i/o api and file/memory stream api
+ctalk   | a cross-platform file i/o api and data stream api
 
 ## testing ctools
 
