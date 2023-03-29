@@ -11,7 +11,7 @@ Simply add `cstream.h` to you include path and `cstream.c` to your build, and yo
 
 ## Testing
 
-Running `make` from the directory containing cstream & its makefile will compile cstream\_test.c and run the resulting executable.
+Running `make` from the directory containing cstream & its makefile will compile `cstream_test.c` and run the resulting executable.
 
 ## License:
 
