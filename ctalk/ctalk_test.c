@@ -98,7 +98,7 @@ bool write_file(char* buff, uint32_t buff_length) {
    cstream_t stream = {0};
 
    printf("write_file:\n   ");
-   if (cstream_write_file(&stream, "ct_test.txt", 0, CStream_TextFile) == CTalkError_None) {
+   if (cstream_write_file(&stream, "ct_test.txt", 0, CFile_Write|CFile_Create|CFile_Overwrite, 0) == CTalkError_None) {
       for (int8_t* c = (int8_t*)buff; *c != 0; ++c) {
          if (cstream_write_8bits(&stream, *c) != CTalkError_None) {
             PRINT_ERROR();
@@ -120,7 +120,7 @@ bool read_file() {
    cstream_t stream = {0};
 
    printf("read_file:\n   ");
-   if (cstream_read_file(&stream, "ct_test.txt", CStream_TextFile) != CTalkError_None) {
+   if (cstream_read_file(&stream, "ct_test.txt", CFile_Read, 0) != CTalkError_None) {
       PRINT_ERROR();
       return(false);
    }

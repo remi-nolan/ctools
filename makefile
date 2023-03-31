@@ -11,7 +11,7 @@ all: ctalk
 
 ctalk:
 	cd ctalk
-	clang -Wall -Werror -g -o $(call exe,ct_test) cstream_test.c
+	clang -Wall -Werror -g -o $(call exe,ct_test) ctalk_test.c
 	$(call cmd,ct_test)
 
 .ONESHELL: ctalk
