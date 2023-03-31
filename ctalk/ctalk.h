@@ -188,9 +188,6 @@ int cstream_valid(cstream_t stream);
 
 #if !defined(CTOOLS_IMPLEMENTATION) || !defined(CTALK_IMPLEMENTATION)
 
-//todo: remove this in favor of an implementation of a cfile api.
-
-
 static int ctalk_last_error;
 int ctalk_error() {
    int result = ctalk_last_error;
