@@ -9,9 +9,11 @@ All of the libraries can be compiled without linking against the standard librar
 
 ## in this repository
 
-Each library is in its own directory (i.e. `ctalk` is in `<ctools>/ctalk/`), containing a header file and two source files (the library's source file and a test program's source file).
+Each library is in its own directory (i.e. `ctalk` is in `<ctools>/ctalk/`), containing a header file and a source file.
+The header file contains the entire library and is all you need to include the library in your project.
+The source file is a small program designed to test each feature of the library, and functions as an example use of the library.
 
-A list of the libraries and a short description is as follows:
+Here is a list of the libraries and a short description:
 
 library | description
 ------: | :----------
