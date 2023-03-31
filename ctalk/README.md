@@ -1,9 +1,9 @@
 # ctalk
 A minimalist c99 data-stream library by Remi Nolan.
 
-As of right now, it only supports reading from a memory buffer or a file, however support for writing to both is in development.
+Currently it supports the C-Standard Library for file i/o however platform-specific alternatives are currently in development
 
-Currently it supports the C-Standard Library for file i/o however platform-specific alternatives are in development
+The C Standard Library (and, C Standard includes) will be entirely optional once the custom api is done (stdlib will not used by default, though it will be an option to be enabled with `#define CTOOLS_FORCE_STDIO`), and the Standard Include can be disabled by using `#define CTOOLS_NO_STDINC` (in which case it will define its own versions (using `#define` no they can be `undef`'d if needed).
 
 ## Adding to Your Project
 
