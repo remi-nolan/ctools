@@ -25,40 +25,40 @@
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT EXPRESS OR IMPLIED WARRANTY OF ANY KIND, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#ifndef CTOOLS_STDINT
+#define CTOOLS_STDINT
+
+#ifndef CTOOLS_NO_STANDARD_INCLUDE
+#include <stdint.h>
+#include <stdbool.h>
+#else
+   #define int8_t    signed char
+   #define int16_t   signed short
+   #define int32_t   signed long
+   #define int64_t   signed long long
+   #define uint8_t   unsigned char
+   #define uint16_t  unsigned short
+   #define uint32_t  unsigned long
+   #define uint64_t  unsigned long long
+
+   #ifndef bool
+      #define bool _Bool
+   #endif//bool
+   
+   #ifndef true
+      #define true (1)
+   #endif//true
+   
+   #ifndef false
+      #define false (0)
+   #endif//false
+#endif//CTOOLS_NO_STANDARD_INCLUDE
+#endif//CTOOLS_STDINT
+
+
 #ifndef CTALK_INCLUDED
 #define CTALK_INCLUDED
 
-#ifndef CTOOLS_NO_STANDARD_INCLUDE
-#define CTOOLS_STDINT
-#include<stdint.h>
-#include<stdbool.h>
-#endif
-
-#ifndef CTOOLS_STDINC
-#define CTOOLS_STDINC
-
-#define int8_t    signed char
-#define int16_t   signed short
-#define int32_t   signed long
-#define int64_t   signed long long
-#define uint8_t   unsigned char
-#define uint16_t  unsigned short
-#define uint32_t  unsigned long
-#define uint64_t  unsigned long long
-
-#ifndef bool
-#define bool _Bool
-#endif//bool
-
-#ifndef true
-#define true (1)
-#endif//true
-
-#ifndef false
-#define false (0)
-#endif//false
-
-#endif//CTOOLS_STDINC
 
 enum ctalk_error_e {
    CTalkError_None               = 0,
