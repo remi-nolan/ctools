@@ -17,7 +17,8 @@ Here is a list of the libraries and a short description:
 
 library | description
 ------: | :----------
-ctalk   | a cross-platform file i/o api and data stream api
+ctalk   | a file i/o api and data stream api
+cbug    | a debug-break & assert toolkit
 
 ## testing ctools
 
