@@ -44,11 +44,11 @@
    #ifndef bool
       #define bool _Bool
    #endif//bool
-   
+
    #ifndef true
       #define true (1)
    #endif//true
-   
+
    #ifndef false
       #define false (0)
    #endif//false
@@ -63,7 +63,8 @@
 enum ctalk_error_e {
    CTalkError_None               = 0,
    CTalkError_EndOfStream        = 1,
-   CTalkError_Unspecified        = 5,
+   CTalkError_Unspecified        = 99,
+   CTalkError_Unsupported        = 98,
 
    CTalkError_NullPointer        = 2,
    CTalkError_InvalidArg         = 3,
@@ -76,6 +77,8 @@ enum ctalk_error_e {
    CTalkError_PathExceedsLimit   = 9,
    CTalkError_SymlinkLoop        = 10,
    CTalkError_FileTooBig         = 11,
+   CTalkError_SignalInterrupt    = 12,
+   CTalkError_NotEnoughSpace     = 13,
 };
 int ctalk_error();
 
@@ -106,10 +109,6 @@ typedef struct cfile_s {
 int cfile_init(cfile_t* file, char* filename, uint8_t flags);
 int cfile_quit(cfile_t* file);
 
-cfile_t* cfile_stdout();
-cfile_t* cfile_stderr();
-cfile_t* cfile_stdin();
-
 bool cfile_valid(cfile_t file);
 int cfile_move(cfile_t file, int32_t factor, int from);
 
@@ -121,6 +120,9 @@ uint32_t cfile_write(cfile_t file, uint32_t num_bytes, int8_t* bytes);
 
 bool cfile_exists(char* filename);
 
+inline cfile_t ctalk_stdout();
+inline cfile_t ctalk_stderr();
+inline cfile_t ctalk_stdin();
 
 enum cstream_type_e {
    CStreamType_Unknown   = 0,
@@ -138,15 +140,9 @@ typedef struct cstream_s {
    int type;
    int flags;
 
-   union {
-      struct {
-         uint32_t position;
-         uint32_t length;
-      };
-      struct {
-         uint32_t bytes_written;
-         uint32_t bytes_max;
-      };
+   struct {
+      uint32_t position;
+      uint32_t length;
    };
 
    union {
@@ -166,8 +162,8 @@ int cstream_read_32bits(cstream_t* stream, int32_t* out);
 int cstream_read_64bits(cstream_t* stream, int64_t* out);
 
 
-int cstream_write_memory(cstream_t* stream, void* memory, uint32_t max_bytes, int flags);
-int cstream_write_file(cstream_t* stream, char* filename, uint32_t max_bytes, int file_flags, int stream_flags);
+int cstream_write_memory(cstream_t* stream, void* memory, uint32_t length, int flags);
+int cstream_write_file(cstream_t* stream, char* filename, uint32_t length, int file_flags, int stream_flags);
 
 uint32_t cstream_write(cstream_t* stream, uint32_t count, int8_t* buffer);
 
@@ -198,9 +194,186 @@ int ctalk_error() {
 #define CTalk_Error(error_code) ctalk_last_error = error_code
 #define CTalk_ErrorOut(error_code) return(CTalk_Error(error_code))
 
-#if defined(CTOOLS_FORCE_STDIO) || !defined(CTOOLS_CFILE_IMPLEMENTATION)
+#if defined(_WIN32)
+//#define CFILE_IMPLEMENTATION
+
+//todo: win32 file api
+
+#elif defined(__linux__)
+#define CFILE_IMPLEMENTATION
+
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <errno.h>
+
+static inline int cfile_intern_translate_errno();
+#define PLATFORM_NEEDS_ERRNO_TRANSLATION
+
+int cfile_init(cfile_t* file, char* filename, uint8_t flags) {
+   int open_flags = 0;
+
+   switch(flags & CFile_AccessBits) {
+      case CFile_Read|CFile_Write:
+         open_flags |= O_RDWR;
+         break;
+      case CFile_Read:
+         open_flags |= O_RDONLY;
+         break;
+      case CFile_Write:
+         open_flags |= O_WRONLY;
+         break;
+      default:
+         CTalk_ErrorOut(CTalkError_InvalidArg);
+   }
+
+   if(flags & CFile_Write) {
+      switch(flags & CFile_OpenBits) {
+         case CFile_Create:
+            open_flags |= O_CREAT|O_EXCL;
+            break;
+         case CFile_Overwrite:
+            open_flags |= O_TRUNC|O_EXCL;
+            break;
+         case CFile_Append:
+            open_flags |= O_APPEND;
+            break;
+
+         case CFile_Create|CFile_Overwrite:
+            open_flags |= O_CREAT|O_TRUNC;
+            break;
+         case CFile_Create|CFile_Append:
+            open_flags |= O_CREAT|O_APPEND;
+            break;
+      }
+   }
+
+   int handle = open(filename, open_flags);
+   if(handle != -1) {
+      //since we compile with warnings as errors (to avoid flooding the builds of people who compile with warnings)
+      //this will throw warnings if we just raw cast the handle to a void*, so we have to or it with a blank long.
+      //I'd imagine this is optimized out (or otherwise minimized); however it should be investigated
+      // -remi (01 April 2023)
+
+      off_t size = lseek(handle, 0, SEEK_END);
+      lseek(handle, 0, SEEK_SET);
+
+      if(size != -1) {
+         *file = (cfile_t){
+            .handle = (void*)(0L|handle),
+            .flags = flags,
+            .size = size,
+         };
+      } else {
+         CTalk_ErrorOut(cfile_intern_translate_errno());
+      }
+   } else {
+      CTalk_ErrorOut(cfile_intern_translate_errno());
+   }
+
+   return(CTalkError_None);
+}
+
+int cfile_quit(cfile_t* file) {
+   if(!file)
+      CTalk_ErrorOut(CTalkError_NullPointer);
+   if(!cfile_valid(*file))
+      CTalk_ErrorOut(CTalkError_InvalidArg);
+
+   int handle = (int)(int64_t)file->handle;
+
+   *file = (cfile_t){0};
+
+   if(close(handle) == -1)
+      CTalk_ErrorOut(cfile_intern_translate_errno());
+
+   return(CTalkError_None);
+}
+
+bool cfile_valid(cfile_t file) {
+   int handle = (int)(int64_t)file.handle;
+   return(handle != -1);
+}
+
+int cfile_move(cfile_t file, int32_t factor, int from) {
+   if(cfile_valid(file))
+      CTalk_ErrorOut(CTalkError_InvalidArg);
+
+   int whence = 0;
+   switch(from) {
+      case CFile_FromBeginning:
+         whence = SEEK_SET;
+         break;
+      case CFile_FromCurrent:
+         whence = SEEK_CUR;
+         break;
+      case CFile_FromEnd:
+         factor *= -1;
+         whence = SEEK_END;
+         break;
+   }
+
+   int handle = (int)(int64_t)file.handle;
+   lseek(handle, factor, whence);
+
+   return(CTalkError_None);
+}
+
+bool cfile_readable(cfile_t file) {
+   return(cfile_valid(file) && file.flags & CFile_Read);
+}
+
+uint32_t cfile_read(cfile_t file, uint32_t num_bytes, int8_t* bytes) {
+   if(!cfile_valid(file))
+      CTalk_ErrorOut(CTalkError_InvalidArg);
+
+   int32_t bytes_read = 0;
+   int handle = (int)(int64_t)file.handle;
+
+   bytes_read = (int32_t)read(handle, bytes, num_bytes);
+   if(bytes_read == -1)
+      CTalk_ErrorOut(cfile_intern_translate_errno());
+
+   return((uint32_t)bytes_read);
+}
+
+bool cfile_writable(cfile_t file) {
+   return(cfile_valid(file) && file.flags & CFile_Write);
+}
+
+uint32_t cfile_write(cfile_t file, uint32_t num_bytes, int8_t* bytes) {
+   if(!cfile_valid(file))
+      CTalk_ErrorOut(CTalkError_InvalidArg);
+
+   int32_t bytes_read = 0;
+   int handle = (int)(int64_t)file.handle;
+
+   bytes_read = (int32_t)write(handle, bytes, num_bytes);
+   if(bytes_read == -1)
+      CTalk_ErrorOut(cfile_intern_translate_errno());
+
+   return((uint32_t)bytes_read);
+}
+
+bool cfile_exists(char* filename) {
+   bool result = false;
+
+   if(filename)
+      result = (access(filename, F_OK) == 0);
+   else
+      CTalk_Error(CTalkError_NullPointer);
+
+   return(result);
+}
+
+#endif
+
+#if defined(CTOOLS_FORCE_STDIO) || !defined(CFILE_IMPLEMENTATION)
 #include <stdio.h>
 #include <errno.h>
+
+static inline int cfile_intern_translate_errno();
+#define PLATFORM_NEEDS_ERRNO_TRANSLATION
 
 int cfile_init(cfile_t* file, char* filename, uint8_t flags) {
    if(!file || !filename)
@@ -275,30 +448,7 @@ int cfile_init(cfile_t* file, char* filename, uint8_t flags) {
       }
    } else {
       *file = (cfile_t){0};
-
-      switch(errno) {
-         default:
-            CTalk_ErrorOut(CTalkError_Unspecified);
-
-         case EACCES:
-            CTalk_ErrorOut(CTalkError_AccessDenied);
-
-         case EISDIR:
-            CTalk_ErrorOut(CTalkError_WriteDir);
-
-         case ENFILE:
-         case EMFILE:
-            CTalk_ErrorOut(CTalkError_TooManyFilesOpen);
-
-         case ENAMETOOLONG:
-            CTalk_ErrorOut(CTalkError_PathExceedsLimit);
-
-         case ELOOP:
-            CTalk_ErrorOut(CTalkError_SymlinkLoop);
-
-         case EOVERFLOW:
-            CTalk_ErrorOut(CTalkError_FileTooBig);
-      }
+      CTalk_ErrorOut(cfile_intern_translate_errno());
    }
 
    return(CTalkError_None);
@@ -316,44 +466,9 @@ int cfile_quit(cfile_t* file) {
    return(CTalkError_None);
 }
 
-static cfile_t cfile_stdout_handle;
-cfile_t* cfile_stdout() {
-   if(!cfile_stdout_handle.handle) {
-      cfile_stdout_handle = (cfile_t){
-         .handle = stdout,
-         .flags = CFile_Write,
-      };
-   }
-
-   return(&cfile_stdout_handle);
-}
-
-static cfile_t cfile_stderr_handle;
-cfile_t* cfile_stderr() {
-   if(!cfile_stderr_handle.handle) {
-      cfile_stderr_handle = (cfile_t){
-         .handle = stderr,
-         .flags = CFile_Write,
-      };
-   }
-
-   return(&cfile_stderr_handle);
-}
-
-static cfile_t cfile_stdin_handle;
-cfile_t* cfile_stdin() {
-   if(!cfile_stdin_handle.handle) {
-      cfile_stdin_handle = (cfile_t){
-         .handle = stdin,
-         .flags = CFile_Read,
-      };
-   }
-
-   return(&cfile_stdin_handle);
-}
 
 bool cfile_valid(cfile_t file) {
-   return(file.handle);
+   return(file.handle != NULL);
 }
 
 int cfile_move(cfile_t file, int32_t factor, int from) {
@@ -430,7 +545,6 @@ uint32_t cfile_write(cfile_t file, uint32_t num_bytes, int8_t* bytes) {
 
 bool cfile_exists(char* filename) {
    bool result = false;
-
    FILE* handle = fopen(filename, "r");
    if (handle) {
       result = true;
@@ -440,7 +554,67 @@ bool cfile_exists(char* filename) {
    return(result);
 }
 
+inline cfile_t cfile_stdout() {
+   return((cfile_t){
+      .flags=CFile_Write,
+      .size=0xFFFFFFFF,
+      .handle=stdout,
+   });
+}
+
+inline cfile_t cfile_stderr() {
+   return((cfile_t) {
+      .flags=CFile_Write,
+      .size=0xFFFFFFFF,
+      .handle=stderr,
+   });
+}
+
+inline cfile_t cfile_stdin() {
+   return((cfile_t) {
+      .flags=CFile_Read,
+      .size=0xFFFFFFFF,
+      .handle=stdin,
+   });
+}
+
 #endif//defined(CTOOLS_FORCE_STDIO) || !defined(CTOOLS_CFILE_IMPLEMENTATION)
+
+#ifdef PLATFORM_NEEDS_ERRNO_TRANSLATION
+#undef PLATFORM_NEEDS_ERRNO_TRANSLATION
+static inline int cfile_intern_translate_errno() {
+   switch(errno) {
+      default:
+         return(CTalkError_Unspecified);
+      case EBADF:
+         return(CTalkError_InvalidArg);
+      case EINVAL:
+         return(CTalkError_InvalidArg);
+      case EOVERFLOW:
+         return(CTalkError_FileTooBig);
+      case EACCES:
+         return(CTalkError_AccessDenied);
+      case EISDIR:
+         return(CTalkError_WriteDir);
+      case ENFILE:
+         return(CTalkError_TooManyFilesOpen);
+      case EMFILE:
+         return(CTalkError_TooManyFilesOpen);
+      case ENAMETOOLONG:
+         return(CTalkError_PathExceedsLimit);
+      case ELOOP:
+         return(CTalkError_SymlinkLoop);
+      case ESPIPE:
+         return(CTalkError_Unsupported);
+      case ENXIO:
+         return(CTalkError_EndOfStream);
+      case EINTR:
+         return(CTalkError_SignalInterrupt);
+      case ENOSPC:
+         return(CTalkError_NotEnoughSpace);
+  }
+}
+#endif//PLATFORM_NEEDS_ERRNO_TRANSLATION
 
 
 
@@ -562,7 +736,7 @@ int cstream_read_64bits(cstream_t* stream, int64_t* out) {
 }
 
 
-int cstream_write_memory(cstream_t* stream, void* memory, uint32_t max_bytes, int flags) {
+int cstream_write_memory(cstream_t* stream, void* memory, uint32_t length, int flags) {
    if(!stream || !memory)
       CTalk_ErrorOut(CTalkError_NullPointer);
    if(cstream_valid(*stream))
@@ -570,14 +744,14 @@ int cstream_write_memory(cstream_t* stream, void* memory, uint32_t max_bytes, in
 
    stream->type = CStreamType_Memory;
    stream->flags = flags|CStream_IsWrite;
-   stream->bytes_written = 0;
-   stream->bytes_max = max_bytes;
+   stream->position = 0;
+   stream->length = length;
    stream->memory = memory;
 
    return(CTalkError_None);
 }
 
-int cstream_write_file(cstream_t* stream, char* filename, uint32_t max_bytes, int file_flags, int flags) {
+int cstream_write_file(cstream_t* stream, char* filename, uint32_t length, int file_flags, int flags) {
    if(!stream || !filename)
       CTalk_ErrorOut(CTalkError_NullPointer);
    if(cstream_valid(*stream))
@@ -585,13 +759,18 @@ int cstream_write_file(cstream_t* stream, char* filename, uint32_t max_bytes, in
 
    stream->type = CStreamType_File;
    stream->flags = flags|CStream_IsWrite;
-   stream->bytes_written = 0;
-   stream->bytes_max = max_bytes;
+   stream->position = 0;
+   stream->length = length;
 
    cfile_init(&stream->file, filename, file_flags);
 
    if(cfile_valid(stream->file)) {
-      stream->length = stream->file.size;
+      if(stream->length == 0) {
+         if(stream->file.size > 0)
+            stream->length = stream->file.size;
+         else
+            stream->length = 0xFFFFFFFF;
+      }
    } else {
       *stream = (cstream_t){0};
       CTalk_ErrorOut(ctalk_last_error);
@@ -616,8 +795,8 @@ uint32_t cstream_write(cstream_t* stream, uint32_t count, int8_t* buffer) {
          } break;
 
          case CStreamType_Memory: {
-            if(stream->bytes_written + count >= stream->bytes_max)
-               count = stream->bytes_max - stream->position;
+            if(stream->position + count >= stream->length)
+               count = stream->length - stream->position;
 
             for(bytes_written = 0; bytes_written < count; ++bytes_written)
                ((int8_t*)stream->memory)[stream->position++] = *buffer++;
@@ -724,12 +903,6 @@ int cstream_quit(cstream_t* stream) {
 }
 
 int cstream_valid(cstream_t stream) {
-   /*
-    * as of right now, this is the valid for *both* file and memory streams;
-    * this might change later if more `stream_type`s are added,
-    * at which time this function will need to be in the standard discriminated union form
-    *  -remi, 22 march 2023
-    */
    if(stream.type == CStreamType_File)
       return(cfile_valid(stream.file));
 
@@ -742,7 +915,7 @@ int cstream_move(cstream_t* stream, int32_t factor, int from) {
    if(!cstream_valid(*stream))
       CTalk_ErrorOut(CTalkError_InvalidArg);
 
-   uint32_t new_position = 0; 
+   uint32_t new_position = 0;
    switch(from) {
       default:
          CTalk_ErrorOut(CTalkError_InvalidArg);
