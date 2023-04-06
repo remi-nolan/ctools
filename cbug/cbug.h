@@ -69,7 +69,7 @@
       #elif defined(_M_ARM) || defined(_M_ARMT)
          #define CBug_Breakpoint(...) __asm BKPT
       #else//not x86_64 or arm
-         #error CBug doesn't support the current architecture
+         #error CBug does not support the current architecture
       #endif
    #elif defined(__GNUC__) || defined(__llvm__)
       #if defined(__x86_64)
@@ -77,10 +77,10 @@
       #elif defined(__arm__)
          #define CBug_Breakpoint(...) asm("BKPT")
       #else//not x86_64 or arm
-         #error CBug doesn't support the current architecture
+         #error CBug does not support the current architecture
       #endif
    #else
-      #error CBUG doesn't support the current compiler
+      #error CBUG does not support the current compiler
    #endif
 
    typedef bool (*CBug_Assert_Fail)(const char* condition, const char* filename, int64_t line, const char* function);
