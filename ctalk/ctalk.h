@@ -120,10 +120,6 @@ uint32_t cfile_write(cfile_t file, uint32_t num_bytes, int8_t* bytes);
 
 bool cfile_exists(char* filename);
 
-inline cfile_t ctalk_stdout();
-inline cfile_t ctalk_stderr();
-inline cfile_t ctalk_stdin();
-
 enum cstream_type_e {
    CStreamType_Unknown   = 0,
 
