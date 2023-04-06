@@ -1,6 +1,6 @@
 /*
  * ctalk - ctalk.h
- * a minimalist c99, header-only cross-platform file i/o and data-stream library by Remi Nolan
+ * a minimalist c99, header-only, cross-platform file i/o and data-stream library by Remi Nolan
  *
  * License:
  * ANTI-CAPITALIST SOFTWARE LICENSE(v 1.4)
@@ -102,7 +102,7 @@ enum cfile_from_e {
 
 typedef struct cfile_s {
    uint8_t flags;
-   uint32_t size;
+   uint64_t size;
    void* handle;
 } cfile_t;
 
@@ -110,7 +110,7 @@ int cfile_init(cfile_t* file, char* filename, uint8_t flags);
 int cfile_quit(cfile_t* file);
 
 bool cfile_valid(cfile_t file);
-int cfile_move(cfile_t file, int32_t factor, int from);
+int cfile_move(cfile_t file, int64_t factor, int from);
 
 bool cfile_readable(cfile_t file);
 uint32_t cfile_read(cfile_t file, uint32_t num_bytes, int8_t* bytes);
@@ -194,12 +194,172 @@ int ctalk_error() {
 #define CTalk_Error(error_code) ctalk_last_error = error_code
 #define CTalk_ErrorOut(error_code) return(CTalk_Error(error_code))
 
-#if defined(_WIN32)
-//#define CFILE_IMPLEMENTATION
+#if !defined(CTOOLS_FORCE_STDIO) && defined(_WIN32)
+#define CFILE_IMPLEMENTATION
+#include <Windows.h>
 
-//todo: win32 file api
+int cfile_init(cfile_t* file, char* filename, uint8_t flags) {
+   if(!file || !filename)
+      CTalk_ErrorOut(CTalkError_NullPointer);
+   if(cfile_valid(*file))
+      CTalk_ErrorOut(CTalkError_InvalidArg);
 
-#elif defined(__linux__)
+   bool seek_end = false;
+   DWORD desired_access = 0;
+   DWORD creation_disposition = 0;
+
+   if(flags & CFile_Read)
+      desired_access |= GENERIC_READ;
+   if(flags & CFile_Write)
+      desired_access |= GENERIC_WRITE;
+   if(desired_access == 0)
+      CTalk_ErrorOut(CTalkError_InvalidArg);
+
+   if(flags & CFile_Write) {
+      switch(flags & CFile_OpenBits) {
+         default:
+            CTalk_ErrorOut(CTalkError_InvalidArg);
+
+         case CFile_Create:
+            creation_disposition = CREATE_NEW;
+            break;
+         case CFile_Overwrite:
+            creation_disposition = TRUNCATE_EXISTING;
+            break;
+         case CFile_Append:
+            creation_disposition = OPEN_EXISTING;
+            seek_end = true;
+            break;
+
+         case CFile_Create|CFile_Overwrite:
+            creation_disposition = CREATE_ALWAYS;
+            break;
+         case CFile_Create|CFile_Append:
+            creation_disposition = OPEN_ALWAYS;
+            seek_end = true;
+            break;
+      }
+   } else {
+      creation_disposition = OPEN_EXISTING;
+   }
+
+   /*
+    * note: right now we hardcode dwShareMode to zero (lock all access if you're not the us).
+    * potentially in the future we might want to expose this to the user.
+    * that way we are making as few decisions in library-code as possible.
+    *  -remi 01 April 2023
+    */
+   HANDLE handle = CreateFile(filename, desired_access, 0, 0, creation_disposition, FILE_ATTRIBUTE_NORMAL, 0);
+
+   if(handle != INVALID_HANDLE_VALUE) {
+      uint64_t file_size = 0;
+
+      {
+         LARGE_INTEGER quad_file_size;
+         if(GetFileSizeEx(handle, &quad_file_size)) {
+            file_size = quad_file_size.QuadPart;
+         } else {
+            //CTalk_ErrorOut(cfile_intern_parse_win32_last_error());
+         }
+      }
+
+      if(seek_end)
+         SetFilePointerEx(handle, (LARGE_INTEGER){0}, 0, FILE_END); //we're appending, which windows doesn't native support, so we just seek to the end of the file
+
+      *file = (cfile_t){
+         .handle = (void*)handle,
+         .flags = flags,
+         .size = file_size,
+      };
+   } else {
+      //CTalk_ErrorOut(cfile_intern_parse_win32_last_error());
+   }
+
+   return(CTalkError_None);
+}
+
+int cfile_quit(cfile_t* file) {
+   if(!file)
+      CTalk_ErrorOut(CTalkError_NullPointer);
+   if(!cfile_valid(*file))
+      CTalk_ErrorOut(CTalkError_InvalidArg);
+
+   CloseHandle(file->handle);
+   *file = (cfile_t){0};
+
+   return(CTalkError_None);
+}
+
+bool cfile_valid(cfile_t file) {
+   return(file.flags != 0 && file.handle != INVALID_HANDLE_VALUE);
+}
+
+int cfile_move(cfile_t file, int64_t factor, int from) {
+   if(!cfile_valid(file))
+      CTalk_ErrorOut(CTalkError_InvalidArg);
+
+   DWORD move_method;
+   switch(from) {
+      case CFile_FromBeginning:
+         move_method = FILE_BEGIN;
+         break;
+      case CFile_FromCurrent:
+         move_method = FILE_CURRENT;
+         break;
+      case CFile_FromEnd:
+         move_method = FILE_END;
+         break;
+   }
+
+   LARGE_INTEGER quad_factor = { .QuadPart = factor };
+   SetFilePointerEx((HANDLE)file.handle, quad_factor, 0, move_method);
+
+   //todo: handle SetFilePointer failure
+
+   return(CTalkError_None);
+}
+
+bool cfile_readable(cfile_t file) {
+   return(cfile_valid(file) && file.flags & CFile_Read);
+}
+
+uint32_t cfile_read(cfile_t file, uint32_t num_bytes, int8_t* bytes) {
+   uint32_t result = -1;
+
+   if(cfile_valid(file))
+      ReadFile((HANDLE)file.handle, (LPVOID)bytes, (DWORD)num_bytes, (LPDWORD)&result, 0);
+   else
+      CTalk_Error(CTalkError_InvalidArg);
+
+   return(result);
+}
+
+bool cfile_writable(cfile_t file) {
+   return(cfile_valid(file) && file.flags & CFile_Write);
+}
+
+uint32_t cfile_write(cfile_t file, uint32_t num_bytes, int8_t* bytes) {
+   uint32_t result = -1;
+
+   if(cfile_valid(file)) {
+      WriteFile((HANDLE)file.handle, (LPCVOID)bytes, (DWORD)num_bytes, (LPDWORD)&result, 0);
+   } else {
+      CTalk_Error(CTalkError_InvalidArg);
+   }
+
+   return(result);
+}
+
+bool cfile_exists(char* filename) {
+   DWORD attribs = GetFileAttributes(filename);
+   bool invalid = attribs != INVALID_FILE_ATTRIBUTES;
+   bool directory = attribs & FILE_ATTRIBUTE_DIRECTORY;
+
+   return(!(invalid || directory));
+}
+
+
+#elif !defined(CTOOLS_FORCE_STDIO) && defined(__linux__)
 #define CFILE_IMPLEMENTATION
 
 #include <sys/stat.h>
@@ -369,6 +529,11 @@ bool cfile_exists(char* filename) {
 #endif
 
 #if defined(CTOOLS_FORCE_STDIO) || !defined(CFILE_IMPLEMENTATION)
+
+#ifdef _MSC_VER
+#define _CRT_SECURE_NO_WARNINGS
+#endif//_MSC_VER
+
 #include <stdio.h>
 #include <errno.h>
 
@@ -427,6 +592,7 @@ int cfile_init(cfile_t* file, char* filename, uint8_t flags) {
          //However this adds a case where the library has to make a decision for the user, which I would rather avoid.
          // -remi(31 March 2023)
       }
+
 
       if(flags & CFile_Read) {
          open_string[3] = '+';
@@ -545,37 +711,19 @@ uint32_t cfile_write(cfile_t file, uint32_t num_bytes, int8_t* bytes) {
 
 bool cfile_exists(char* filename) {
    bool result = false;
-   FILE* handle = fopen(filename, "r");
-   if (handle) {
+INVALID_HANDLE_VALUE
+   ctalk_last_error = CTalkError_None;
+
+   cfile_t file;
+   cfile_init(&file, filename, CFile_Read);
+
+   if (ctalk_error() != CTalkError_FileNotFound)
       result = true;
-      fclose(handle);
-   }
+
+   if(cfile_valid(file))
+      cfile_quit(&file);
 
    return(result);
-}
-
-inline cfile_t cfile_stdout() {
-   return((cfile_t){
-      .flags=CFile_Write,
-      .size=0xFFFFFFFF,
-      .handle=stdout,
-   });
-}
-
-inline cfile_t cfile_stderr() {
-   return((cfile_t) {
-      .flags=CFile_Write,
-      .size=0xFFFFFFFF,
-      .handle=stderr,
-   });
-}
-
-inline cfile_t cfile_stdin() {
-   return((cfile_t) {
-      .flags=CFile_Read,
-      .size=0xFFFFFFFF,
-      .handle=stdin,
-   });
 }
 
 #endif//defined(CTOOLS_FORCE_STDIO) || !defined(CTOOLS_CFILE_IMPLEMENTATION)

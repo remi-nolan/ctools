@@ -79,9 +79,8 @@ bool read_memory(char* buff, int buff_length) {
    do {
       error = cstream_read_8bits(&stream, &byte);
 
-      if (error == CTalkError_None) {
+      if (error == CTalkError_None)
          printf("%c", byte);
-      }
    } while (error == CTalkError_None);
 
    if (error != CTalkError_EndOfStream) {
