@@ -455,7 +455,17 @@ bool cfile_valid(cfile_t file) {
    return(handle != -1);
 }
 
-int cfile_move(cfile_t file, int32_t factor, int from) {
+/*
+ * note:
+ * we take in `factor` as an int64_t here, even though it is immediately cast to an int32_t.
+ * Why? Because on Windows we can support Large Files, however the Linux/CRT libraries do not have support this.
+ * I'm sure there is a way to support it, but as of right now I don't need it.
+ * If it comes time that I need 4GiB+ files (or if there is enough support for it), I'll add it.
+ *  -remi (5 April 2023)
+ */
+int cfile_move(cfile_t file, int64_t factor64, int from) {
+   int32_t factor = (int32_t)factor64;
+
    if(cfile_valid(file))
       CTalk_ErrorOut(CTalkError_InvalidArg);
 
