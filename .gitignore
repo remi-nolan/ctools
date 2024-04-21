@@ -16,8 +16,9 @@ CTestTestfile.cmake
 _deps
 
 # Build Directories
-Debug
-Release
-RelWithDebInfo
-build
+Debug/
+Release/
+RelWithDebInfo/
+build/
+out/
 
