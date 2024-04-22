@@ -40,7 +40,7 @@ void cstream_output_quit(cstream_output_t* stream_output)
 
 bool cstream_output_valid(cstream_output_t stream_output)
 {
-   return(stream_output.source_type > CSTREAM_UNKNOWN && stream_output.source_type < CSTREAM_TYPE_UPPER_BOUND);
+   return(stream_output.source_type != CSTREAM_UNKNOWN);
 }
 
 uint32_t cstream_output_write(cstream_output_t* stream_output, uint32_t byte_count, void* source)
@@ -62,137 +62,41 @@ uint32_t cstream_output_write(cstream_output_t* stream_output, uint32_t byte_cou
 
 bool cstream_output_write_int8(cstream_output_t* stream_output, int8_t source)
 {
-   bool result = false;
-
-   if(stream_output && cstream_output_valid(*stream_output))
-   {
-      switch(stream_output->source_type)
-      {
-      case CSTREAM_MEMORY:
-         cstream_output_memory_write_int8(&stream_output->source.memory, source);
-         break;
-      }
-   }
-
-   return(result);
+   return(cstream_output_write(stream_output, 1, &source) == 1);
 }
 
 bool cstream_output_write_uint8(cstream_output_t* stream_output, uint8_t source)
 {
-   bool result = false;
-
-   if(stream_output && cstream_output_valid(*stream_output))
-   {
-      switch(stream_output->source_type)
-      {
-      case CSTREAM_MEMORY:
-         cstream_output_memory_write_uint8(&stream_output->source.memory, source);
-         break;
-      }
-   }
-
-   return(result);
+   return(cstream_output_write(stream_output, 1, &source) == 1);
 }
 
 bool cstream_output_write_int16(cstream_output_t* stream_output, int16_t source)
 {
-   bool result = false;
-
-   if(stream_output && cstream_output_valid(*stream_output))
-   {
-      switch(stream_output->source_type)
-      {
-      case CSTREAM_MEMORY:
-         cstream_output_memory_write_int16(&stream_output->source.memory, source);
-         break;
-      }
-   }
-
-   return(result);
+   return(cstream_output_write(stream_output, 2, &source) == 2);
 }
 
 bool cstream_output_write_uint16(cstream_output_t* stream_output, uint16_t source)
 {
-   bool result = false;
-
-   if(stream_output && cstream_output_valid(*stream_output))
-   {
-      switch(stream_output->source_type)
-      {
-      case CSTREAM_MEMORY:
-         cstream_output_memory_write_uint16(&stream_output->source.memory, source);
-         break;
-      }
-   }
-
-   return(result);
+   return(cstream_output_write(stream_output, 2, &source) == 2);
 }
 
 bool cstream_output_write_int32(cstream_output_t* stream_output, int32_t source)
 {
-   bool result = false;
-
-   if(stream_output && cstream_output_valid(*stream_output))
-   {
-      switch(stream_output->source_type)
-      {
-      case CSTREAM_MEMORY:
-         cstream_output_memory_write_int32(&stream_output->source.memory, source);
-         break;
-      }
-   }
-
-   return(result);
+   return(cstream_output_write(stream_output, 4, &source) == 4);
 }
 
 bool cstream_output_write_uint32(cstream_output_t* stream_output, uint32_t source)
 {
-   bool result = false;
-
-   if(stream_output && cstream_output_valid(*stream_output))
-   {
-      switch(stream_output->source_type)
-      {
-      case CSTREAM_MEMORY:
-         cstream_output_memory_write_uint32(&stream_output->source.memory, source);
-         break;
-      }
-   }
-
-   return(result);
+   return(cstream_output_write(stream_output, 4, &source) == 4);
 }
 
 bool cstream_output_write_int64(cstream_output_t* stream_output, int64_t source)
 {
-   bool result = false;
-
-   if(stream_output && cstream_output_valid(*stream_output))
-   {
-      switch(stream_output->source_type)
-      {
-      case CSTREAM_MEMORY:
-         cstream_output_memory_write_int64(&stream_output->source.memory, source);
-         break;
-      }
-   }
-
-   return(result);
+   return(cstream_output_write(stream_output, 8, &source) == 8);
 }
 
 bool cstream_output_write_uint64(cstream_output_t* stream_output, uint64_t source)
 {
-   bool result = false;
-
-   if(stream_output && cstream_output_valid(*stream_output))
-   {
-      switch(stream_output->source_type)
-      {
-      case CSTREAM_MEMORY:
-         cstream_output_memory_write_uint64(&stream_output->source.memory, source);
-         break;
-      }
-   }
-
-   return(result);
+   return(cstream_output_write(stream_output, 8, &source) == 8);
 }
 

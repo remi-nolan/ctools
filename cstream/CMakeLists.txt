@@ -4,6 +4,7 @@ set(CSTREAM_HEADERS
    ${CMAKE_CURRENT_SOURCE_DIR}/cstream.h
 
    ${CMAKE_CURRENT_SOURCE_DIR}/cstream_input_memory.h
+   ${CMAKE_CURRENT_SOURCE_DIR}/cstream_input_file.h
    ${CMAKE_CURRENT_SOURCE_DIR}/cstream_input.h
 
    ${CMAKE_CURRENT_SOURCE_DIR}/cstream_output_memory.h
@@ -12,9 +13,10 @@ set(CSTREAM_HEADERS
 
 set(CSTREAM_SOURCES
    ${CMAKE_CURRENT_SOURCE_DIR}/cstream_input_memory.c
+   ${CMAKE_CURRENT_SOURCE_DIR}/cstream_input_file.c
    ${CMAKE_CURRENT_SOURCE_DIR}/cstream_input.c
 
-   # ${CMAKE_CURRENT_SOURCE_DIR}/cstream_output_memory.c
+   ${CMAKE_CURRENT_SOURCE_DIR}/cstream_output_memory.c
    ${CMAKE_CURRENT_SOURCE_DIR}/cstream_output.c
 )
 
@@ -35,6 +37,8 @@ set_target_properties(cstream PROPERTIES
    PUBLIC_HEADER "${CSTREAM_HEADERS}"
    # XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "duphus"
 )
+
+target_compile_features(cstream PUBLIC c_std_99)
 
 set_property(TARGET cstream PROPERTY COMPILE_WARNING_AS_ERROR ON)
 

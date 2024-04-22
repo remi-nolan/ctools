@@ -2,12 +2,14 @@
 #define __CSTREAM_INPUT__
 
 #include "cstream_input_memory.h"
+#include "cstream_input_file.h"
 
 #include <stdbool.h>
 
 typedef union cstream_input_source_t
 {
    cstream_input_memory_t memory;
+   cstream_input_file_t file;
 } cstream_input_source_t;
 
 typedef struct cstream_input_t
@@ -18,6 +20,8 @@ typedef struct cstream_input_t
 
 bool cstream_input_init_memory(cstream_input_t* stream_input, uint32_t memory_length, void* memory);
 bool cstream_input_init_memory_no_copy(cstream_input_t* stream_input, void* memory, uint32_t memory_length);
+
+bool cstream_input_init_file(cstream_input_t* input_stream, char* filename);
 
 void cstream_input_quit(cstream_input_t* stream_input);
 

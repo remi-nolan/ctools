@@ -1,6 +1,10 @@
 
+# macos stuff
+.DS_Store
+
 # vim stuff
 .ycm_extra_conf.py
+*.swp
 
 # cmake ignores
 CMakeLists.txt.user
