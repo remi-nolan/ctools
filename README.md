@@ -5,7 +5,7 @@ Each tool is a self-contained project designed to be usable independent of each 
 With more tools are planned as time goes on.
 
 # license
-ctools are all licensed under the [anti-caplitalist software license](anticapitalist.software), for more information, see license.
+ctools are all licensed under the [anti-caplitalist software license](https://anticapitalist.software), for more information, see license.
 It is also included at the top of all text files associated with cstream.
 
 ## cstream
