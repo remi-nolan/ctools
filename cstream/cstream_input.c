@@ -1,26 +1,26 @@
 #include "cstream.h"
 
-bool cstream_input_init_memory(cstream_input_t* stream_input, uint32_t memory_length, void* memory)
+bool cstream_input_init_memory(cstream_input_t* stream_input, uint64_t memory_length, void* memory)
 {
    bool result = false;
 
    if(stream_input)
    {
       stream_input->source_type = CSTREAM_MEMORY;
-      result = cstream_input_memory_init(&stream_input->source.memory, memory, memory_length);
+      result = cstream_input_memory_init(&stream_input->source.memory, memory_length, memory);
    }
 
    return(result);
 }
 
-bool cstream_input_init_memory_no_copy(cstream_input_t* stream_input, void* memory, uint32_t memory_length)
+bool cstream_input_init_memory_no_copy(cstream_input_t* stream_input, uint64_t memory_length, void* memory)
 {
    bool result = false;
 
    if(stream_input)
    {
       stream_input->source_type = CSTREAM_MEMORY;
-      result = cstream_input_memory_init_no_copy(&stream_input->source.memory, memory, memory_length);
+      result = cstream_input_memory_init_no_copy(&stream_input->source.memory, memory_length, memory);
    }
 
    return(result);
@@ -63,9 +63,9 @@ bool cstream_input_valid(cstream_input_t stream_input)
    return(stream_input.source_type != CSTREAM_UNKNOWN);
 }
 
-uint32_t cstream_input_read(cstream_input_t* stream_input, uint32_t desired_byte_count, void* destination)
+uint64_t cstream_input_read(cstream_input_t* stream_input, uint64_t desired_byte_count, void* destination)
 {
-   uint32_t result = 0;
+   uint64_t result = 0;
 
    if(stream_input && cstream_input_valid(*stream_input))
    {

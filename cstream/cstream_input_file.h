@@ -6,8 +6,8 @@
 
 typedef struct cstream_input_file_t
 {
-   uint32_t position;
-   uint32_t length;
+   uint64_t position;
+   uint64_t length;
    void* handle;
 } cstream_input_file_t;
 
@@ -17,6 +17,6 @@ void cstream_input_file_quit(cstream_input_file_t* file_stream);
 
 bool cstream_input_file_valid(cstream_input_file_t file_stream);
 
-uint32_t cstream_input_file_read(cstream_input_file_t* file_stream, uint32_t desired_byte_count, void* destination);
+uint64_t cstream_input_file_read(cstream_input_file_t* file_stream, uint64_t desired_byte_count, void* destination);
 
 #endif//__CSTREAM_INPUT_FILE__

@@ -2,7 +2,7 @@
 
 #include <stdlib.h>
 
-bool cstream_input_memory_init(cstream_input_memory_t* memory_stream, void* memory, uint32_t memory_length)
+bool cstream_input_memory_init(cstream_input_memory_t* memory_stream, uint64_t memory_length, void* memory)
 {
    bool result = false;
 
@@ -39,7 +39,7 @@ bool cstream_input_memory_init(cstream_input_memory_t* memory_stream, void* memo
    return(result);
 }
 
-bool cstream_input_memory_init_no_copy(cstream_input_memory_t* memory_stream, void* memory, uint32_t memory_length)
+bool cstream_input_memory_init_no_copy(cstream_input_memory_t* memory_stream, uint64_t memory_length, void* memory)
 {
    bool result = false;
 
@@ -79,9 +79,9 @@ bool cstream_input_memory_valid(cstream_input_memory_t memory_stream)
    return(memory_stream.length > 0 && memory_stream.buffer != 0);
 }
 
-uint32_t cstream_input_memory_read(cstream_input_memory_t* memory_stream, uint32_t desired_byte_count, void* destination)
+uint64_t cstream_input_memory_read(cstream_input_memory_t* memory_stream, uint64_t desired_byte_count, void* destination)
 {
-   uint32_t result = 0;
+   uint64_t result = 0;
 
    if(memory_stream && cstream_input_memory_valid(*memory_stream) && destination)
    {

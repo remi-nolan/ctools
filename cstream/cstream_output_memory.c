@@ -2,7 +2,7 @@
 
 #include <stdlib.h>
 
-bool cstream_output_memory_init(cstream_output_memory_t* memory_stream, void* memory, uint32_t memory_length)
+bool cstream_output_memory_init(cstream_output_memory_t* memory_stream, uint64_t memory_length, void* memory)
 {
    bool result = false;
 
@@ -11,12 +11,14 @@ bool cstream_output_memory_init(cstream_output_memory_t* memory_stream, void* me
       memory_stream->position = 0;
       memory_stream->length = memory_length;
       memory_stream->memory = memory;
+
+      result = true;
    }
 
    return(result);
 }
 
-bool cstream_output_memory_init_allocate(cstream_output_memory_t* memory_stream, uint32_t memory_length)
+bool cstream_output_memory_init_allocate(cstream_output_memory_t* memory_stream, uint64_t memory_length)
 {
    bool result = false;
 
@@ -50,9 +52,9 @@ bool cstream_output_memory_valid(cstream_output_memory_t memory_stream)
    return(memory_stream.memory && memory_stream.length);
 }
 
-uint32_t cstream_output_memory_write(cstream_output_memory_t* memory_stream, uint32_t desired_byte_count, void* value)
+uint64_t cstream_output_memory_write(cstream_output_memory_t* memory_stream, uint64_t desired_byte_count, void* value)
 {
-   uint32_t bytes_written = 0;
+   uint64_t bytes_written = 0;
 
    if(memory_stream && memory_stream->memory)
    {

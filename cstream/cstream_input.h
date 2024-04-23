@@ -14,12 +14,12 @@ typedef union cstream_input_source_t
 
 typedef struct cstream_input_t
 {
-   uint32_t source_type;
+   uint8_t source_type;
    cstream_input_source_t source;
 } cstream_input_t;
 
-bool cstream_input_init_memory(cstream_input_t* stream_input, uint32_t memory_length, void* memory);
-bool cstream_input_init_memory_no_copy(cstream_input_t* stream_input, void* memory, uint32_t memory_length);
+bool cstream_input_init_memory(cstream_input_t* stream_input, uint64_t memory_length, void* memory);
+bool cstream_input_init_memory_no_copy(cstream_input_t* stream_input, uint64_t memory_length, void* memory);
 
 bool cstream_input_init_file(cstream_input_t* input_stream, char* filename);
 
@@ -27,7 +27,7 @@ void cstream_input_quit(cstream_input_t* stream_input);
 
 bool cstream_input_valid(cstream_input_t stream_input);
 
-uint32_t cstream_input_read(cstream_input_t* stream_input, uint32_t desired_byte_count, void* destination);
+uint64_t cstream_input_read(cstream_input_t* stream_input, uint64_t desired_byte_count, void* destination);
 
 bool cstream_input_read_int8(cstream_input_t* stream_input, int8_t* destination);
 bool cstream_input_read_uint8(cstream_input_t* stream_input, uint8_t* destination);

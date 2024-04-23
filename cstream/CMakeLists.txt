@@ -8,6 +8,7 @@ set(CSTREAM_HEADERS
    ${CMAKE_CURRENT_SOURCE_DIR}/cstream_input.h
 
    ${CMAKE_CURRENT_SOURCE_DIR}/cstream_output_memory.h
+   ${CMAKE_CURRENT_SOURCE_DIR}/cstream_output_file.h
    ${CMAKE_CURRENT_SOURCE_DIR}/cstream_output.h
 )
 
@@ -17,6 +18,7 @@ set(CSTREAM_SOURCES
    ${CMAKE_CURRENT_SOURCE_DIR}/cstream_input.c
 
    ${CMAKE_CURRENT_SOURCE_DIR}/cstream_output_memory.c
+   ${CMAKE_CURRENT_SOURCE_DIR}/cstream_output_file.c
    ${CMAKE_CURRENT_SOURCE_DIR}/cstream_output.c
 )
 

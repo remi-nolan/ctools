@@ -13,12 +13,11 @@ bool cstream_input_file_init(cstream_input_file_t* file_stream, char* file_name)
       if(file_handle)
       {
          file_stream->position = 0;
-
-         fseek(file_stream->handle, 0L, SEEK_END);
-         file_stream->length = ftell(file_stream->handle);
-         rewind(file_stream->handle);
-
          file_stream->handle = (void*)file_handle;
+
+         fseek(file_handle, 0L, SEEK_END);
+         file_stream->length = (uint64_t)ftell(file_handle);
+         rewind(file_handle);
 
          result = true;
       }
@@ -41,9 +40,9 @@ bool cstream_input_file_valid(cstream_input_file_t file_stream)
    return(file_stream.length && file_stream.handle);
 }
 
-uint32_t cstream_input_file_read(cstream_input_file_t* file_stream, uint32_t desired_byte_count, void* destination)
+uint64_t cstream_input_file_read(cstream_input_file_t* file_stream, uint64_t desired_byte_count, void* destination)
 {
-   uint32_t bytes_read = 0;
+   uint64_t bytes_read = 0;
 
    if(file_stream && cstream_input_file_valid(*file_stream) && destination)
    {
@@ -53,6 +52,7 @@ uint32_t cstream_input_file_read(cstream_input_file_t* file_stream, uint32_t des
       }
 
       bytes_read = fread(destination, 1, desired_byte_count, (FILE*)file_stream->handle);
+      file_stream->position += bytes_read;
    }
 
    return(bytes_read);
