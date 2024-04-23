@@ -26,3 +26,6 @@ RelWithDebInfo/
 build/
 out/
 
+# test output
+*.binary
+
