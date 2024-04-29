@@ -42,4 +42,6 @@ bool cstream_output_write_uint32(cstream_output_t* output_stream, uint32_t sourc
 bool cstream_output_write_int64(cstream_output_t* output_stream, int64_t source);
 bool cstream_output_write_uint64(cstream_output_t* output_stream, uint64_t source);
 
+uint64_t cstream_output_write_string(cstream_output_t* output_stream, const char* format_string, ...);
+
 #endif//__CSTREAM_OUTPUT__

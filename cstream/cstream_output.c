@@ -1,6 +1,9 @@
 #include "cstream.h"
 
+#include <stdarg.h>
 #include <stdlib.h>
+
+#include "stb_sprintf.h"
 
 bool cstream_output_init_memory(cstream_output_t* output_stream, uint64_t memory_length, void* memory)
 {
@@ -132,5 +135,30 @@ bool cstream_output_write_int64(cstream_output_t* output_stream, int64_t source)
 bool cstream_output_write_uint64(cstream_output_t* output_stream, uint64_t source)
 {
    return(cstream_output_write(output_stream, 8, &source) == 8);
+}
+
+static char CSTREAM_SPRINTF_BUFFER[STB_SPRINTF_MIN];
+
+static char* cstream_output_string_sprintf_callback(const char* buffer, void* user, int byte_count)
+{
+   cstream_output_t* output_stream = (cstream_output_t*)user;
+   cstream_output_write(output_stream, byte_count, (void*)buffer);
+
+   return(CSTREAM_SPRINTF_BUFFER);
+}
+
+uint64_t cstream_output_write_string(cstream_output_t* output_stream, const char* format_string, ...)
+{
+   va_list variadic_arguments;
+   uint64_t result = 0;
+
+   if(output_stream && format_string)
+   {
+      va_start(variadic_arguments, format_string);
+      result = stbsp_vsprintfcb(cstream_output_string_sprintf_callback, (void*)output_stream, &CSTREAM_SPRINTF_BUFFER[0], format_string, variadic_arguments);
+      va_end(variadic_arguments);
+   }
+
+   return(result);
 }
 

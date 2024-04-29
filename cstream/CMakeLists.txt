@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 3.28)
 set(CSTREAM_HEADERS
    ${CMAKE_CURRENT_SOURCE_DIR}/cstream.h
 
+   ${CMAKE_CURRENT_SOURCE_DIR}/stb_sprintf.h
+
    ${CMAKE_CURRENT_SOURCE_DIR}/cstream_input_memory.h
    ${CMAKE_CURRENT_SOURCE_DIR}/cstream_input_file.h
    ${CMAKE_CURRENT_SOURCE_DIR}/cstream_input.h
@@ -13,6 +15,8 @@ set(CSTREAM_HEADERS
 )
 
 set(CSTREAM_SOURCES
+   ${CMAKE_CURRENT_SOURCE_DIR}/stb_sprintf.c
+
    ${CMAKE_CURRENT_SOURCE_DIR}/cstream_input_memory.c
    ${CMAKE_CURRENT_SOURCE_DIR}/cstream_input_file.c
    ${CMAKE_CURRENT_SOURCE_DIR}/cstream_input.c
@@ -41,6 +45,16 @@ set_target_properties(cstream PROPERTIES
 )
 
 target_compile_features(cstream PUBLIC c_std_99)
+
+
+# compile with all warnings & treat them as errors
+# this way compiling cstream into your project doesn't cause a bunch of nuance errors
+
+if(MSVC)
+  target_compile_options(cstream PRIVATE /W4 /WX)
+else()
+  target_compile_options(cstream PRIVATE -Wall -Wextra -Wpedantic -Werror)
+endif()
 
 set_property(TARGET cstream PROPERTY COMPILE_WARNING_AS_ERROR ON)
 

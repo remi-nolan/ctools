@@ -66,7 +66,7 @@ uint64_t cstream_output_memory_write(cstream_output_memory_t* memory_stream, uin
          desired_byte_count = memory_stream->length - memory_stream->position;
       }
 
-      for(int iter = 0; iter < desired_byte_count; ++iter)
+      for(uint64_t iter = 0; iter < desired_byte_count; ++iter)
       {
          memory_bytes[iter] = value_bytes[iter];
          memory_stream->position++;

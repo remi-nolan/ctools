@@ -27,7 +27,7 @@ bool cstream_input_memory_init(cstream_input_memory_t* memory_stream, uint64_t m
       if(memory_stream->buffer)
       {
          uint8_t* buffer_bytes = (uint8_t*)memory_stream->buffer;
-         for(int iter = 0; iter < memory_length; ++iter)
+         for(uint64_t iter = 0; iter < memory_length; ++iter)
          {
             *buffer_bytes++ = *memory_bytes++;
          }
@@ -95,7 +95,7 @@ uint64_t cstream_input_memory_read(cstream_input_memory_t* memory_stream, uint64
          uint8_t* destination_bytes = (uint8_t*)destination;
          uint8_t* buffer_bytes = ((uint8_t*)memory_stream->buffer) + memory_stream->position;
 
-         for(int iter = 0; iter < desired_byte_count; ++iter)
+         for(uint64_t iter = 0; iter < desired_byte_count; ++iter)
          {
             *destination_bytes++ = *buffer_bytes++;
 
