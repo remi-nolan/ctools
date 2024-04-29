@@ -141,9 +141,7 @@ static char CSTREAM_SPRINTF_BUFFER[STB_SPRINTF_MIN];
 
 static char* cstream_output_string_sprintf_callback(const char* buffer, void* user, int byte_count)
 {
-   cstream_output_t* output_stream = (cstream_output_t*)user;
-   cstream_output_write(output_stream, byte_count, (void*)buffer);
-
+   cstream_output_write((cstream_output_t*)user, byte_count, (void*)buffer);
    return(CSTREAM_SPRINTF_BUFFER);
 }
 
@@ -155,7 +153,7 @@ uint64_t cstream_output_write_string(cstream_output_t* output_stream, const char
    if(output_stream && format_string)
    {
       va_start(variadic_arguments, format_string);
-      result = stbsp_vsprintfcb(cstream_output_string_sprintf_callback, (void*)output_stream, &CSTREAM_SPRINTF_BUFFER[0], format_string, variadic_arguments);
+      result = stbsp_vsprintfcb(cstream_output_string_sprintf_callback, (void*)output_stream, CSTREAM_SPRINTF_BUFFER, format_string, variadic_arguments);
       va_end(variadic_arguments);
    }
 
