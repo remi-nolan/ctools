@@ -28,6 +28,15 @@
 
 #include "cstream.h"
 
+#include <stdio.h>
+
+static cstream_input_file_t cstream_internal_stdin = {
+   .length = -1,
+   .position = 0,
+   .handle = 0
+};
+cstream_input_t cstream_standard_in = { .source_type = CSTREAM_STDIN };
+
 bool cstream_input_init_memory(cstream_input_t* stream_input, uint64_t memory_length, void* memory)
 {
    bool result = false;
@@ -49,6 +58,19 @@ bool cstream_input_init_memory_no_copy(cstream_input_t* stream_input, uint64_t m
    {
       stream_input->source_type = CSTREAM_MEMORY;
       result = cstream_input_memory_init_no_copy(&stream_input->source.memory, memory_length, memory);
+   }
+
+   return(result);
+}
+
+bool cstream_input_init_stdin(cstream_input_t* input_stream)
+{
+   bool result = false;
+
+   if(input_stream && !cstream_input_valid(*input_stream))
+   {
+      input_stream->source_type = CSTREAM_STDIN;
+      input_stream->source = (cstream_input_source_t){0};
    }
 
    return(result);
@@ -104,6 +126,14 @@ uint64_t cstream_input_read(cstream_input_t* stream_input, uint64_t desired_byte
          break;
       case CSTREAM_FILE:
          result = cstream_input_file_read(&stream_input->source.file, desired_byte_count, destination);
+         break;
+      case CSTREAM_STDIN:
+         if(cstream_internal_stdin.handle == 0)
+         {
+            cstream_internal_stdin.handle = stdin;
+         }
+
+         result = cstream_input_file_read(&cstream_internal_stdin, desired_byte_count, destination);
          break;
       }
    }

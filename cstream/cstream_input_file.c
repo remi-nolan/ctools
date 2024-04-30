@@ -30,6 +30,10 @@ void cstream_input_file_quit(cstream_input_file_t* file_stream)
 {
    if(file_stream && cstream_input_file_valid(*file_stream))
    {
+      //we don't want to close there streams
+      if(file_stream->handle == stderr || file_stream->handle == stdout || file_stream->handle == stdin)
+         return;
+
       fclose((FILE*)file_stream->handle);
       *file_stream = (cstream_input_file_t){0};
    }

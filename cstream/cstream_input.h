@@ -18,10 +18,13 @@ typedef struct cstream_input_t
    cstream_input_source_t source;
 } cstream_input_t;
 
+extern cstream_input_t cstream_standard_in;
+
 bool cstream_input_init_memory(cstream_input_t* stream_input, uint64_t memory_length, void* memory);
 bool cstream_input_init_memory_no_copy(cstream_input_t* stream_input, uint64_t memory_length, void* memory);
 
 bool cstream_input_init_file(cstream_input_t* input_stream, char* filename);
+bool cstream_input_init_stdin(cstream_input_t* input_stream);
 
 void cstream_input_quit(cstream_input_t* stream_input);
 

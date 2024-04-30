@@ -2,8 +2,15 @@
 
 #include <stdarg.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "stb_sprintf.h"
+
+static cstream_output_file_t cstream_internal_stdout = {0};
+cstream_output_t cstream_standard_out = { .source_type = CSTREAM_STDOUT };
+
+static cstream_output_file_t cstream_stderr = {0};
+cstream_output_t cstream_standard_error = { .source_type = CSTREAM_STDERR };
 
 bool cstream_output_init_memory(cstream_output_t* output_stream, uint64_t memory_length, void* memory)
 {
@@ -31,6 +38,32 @@ bool cstream_output_init_file(cstream_output_t* output_stream, char* file_name)
 
    output_stream->source_type = CSTREAM_FILE;
    result = cstream_output_file_init(&output_stream->source.file, file_name);
+
+   return(result);
+}
+
+bool cstream_output_init_stdout(cstream_output_t* output_stream)
+{
+   bool result = false;
+
+   if(output_stream && !cstream_output_valid(*output_stream))
+   {
+      output_stream->source_type = CSTREAM_STDOUT;
+      output_stream->source = (cstream_output_source_t){0};
+   }
+
+   return(result);
+}
+
+bool cstream_output_init_stderr(cstream_output_t* output_stream)
+{
+   bool result = false;
+
+   if(output_stream)
+   {
+      output_stream->source_type = CSTREAM_STDERR;
+      output_stream->source = (cstream_output_source_t){0};
+   }
 
    return(result);
 }
@@ -72,6 +105,13 @@ bool cstream_output_valid(cstream_output_t output_stream)
    case CSTREAM_FILE:
       result = cstream_output_file_valid(output_stream.source.file);
       break;
+
+   case CSTREAM_STDOUT:
+      result = true;
+      break;
+   case CSTREAM_STDERR:
+      result = true;
+      break;
    }
 
    return(result);
@@ -90,6 +130,21 @@ uint64_t cstream_output_write(cstream_output_t* output_stream, uint64_t byte_cou
          break;
       case CSTREAM_FILE:
          result = cstream_output_file_write(&output_stream->source.file, byte_count, source);
+         break;
+
+      case CSTREAM_STDOUT:
+         if(cstream_internal_stdout.handle == 0)
+         {
+            cstream_internal_stdout.handle = stdout;
+         }
+         cstream_output_file_write(&cstream_internal_stdout, byte_count, source);
+         break;
+      case CSTREAM_STDERR:
+         if(cstream_stderr.handle == 0)
+         {
+            cstream_stderr.handle = stderr;
+         }
+         cstream_output_file_write(&cstream_stderr, byte_count, source);
          break;
       }
    }

@@ -6,6 +6,10 @@ enum cstream_source_type_e
    CSTREAM_UNKNOWN,
    CSTREAM_MEMORY,
    CSTREAM_FILE,
+
+   CSTREAM_STDIN,
+   CSTREAM_STDOUT,
+   CSTREAM_STDERR,
 };
 
 #endif//__CSTREAM_SOURCE_TYPES__

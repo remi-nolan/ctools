@@ -19,10 +19,15 @@ typedef struct cstream_output_t
    cstream_output_source_t source;
 } cstream_output_t;
 
+extern cstream_output_t cstream_standard_out;
+extern cstream_output_t cstream_standard_error;
+
 bool cstream_output_init_memory(cstream_output_t* output_stream, uint64_t memory_length, void* memory);
 bool cstream_output_init_memory_allocate(cstream_output_t* output_stream, uint64_t memory_length);
 
 bool cstream_output_init_file(cstream_output_t* output_stream, char* file_name);
+bool cstream_output_init_stdout(cstream_output_t* output_stream);
+bool cstream_output_init_stderr(cstream_output_t* output_stream);
 
 void cstream_output_quit(cstream_output_t* output_stream);
 
